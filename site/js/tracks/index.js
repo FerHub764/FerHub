@@ -7,5 +7,8 @@ import cpp from './cpp/index.js';
 import c from './c.js';
 import csharp from './csharp.js';
 import sql from './sql.js';
+import git from './git.js';
+import go from './go.js';
+import rust from './rust.js';
 
-export const TRACKS = [python, htmlCss, javascript, java, cpp, c, csharp, sql];
+export const TRACKS = [python, htmlCss, javascript, java, cpp, c, csharp, sql, git, go, rust];
