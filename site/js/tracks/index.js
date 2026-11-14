@@ -10,5 +10,8 @@ import sql from './sql.js';
 import git from './git.js';
 import go from './go.js';
 import rust from './rust.js';
+import php from './php.js';
+import kotlin from './kotlin.js';
+import swift from './swift.js';
 
-export const TRACKS = [python, htmlCss, javascript, java, cpp, c, csharp, sql, git, go, rust];
+export const TRACKS = [python, htmlCss, javascript, java, cpp, c, csharp, sql, git, go, rust, php, kotlin, swift];
