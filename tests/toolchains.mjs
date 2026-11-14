@@ -90,7 +90,7 @@ export function runSnippet(lang, code, stdin = '', { full } = {}) {
   if (lang === 'java') {
     const src = /\bclass\s+\w+/.test(code) ? code : `public class Main {\n  public static void main(String[] args) {\n${code}\n  }\n}`;
     const imports = /import java\.util/.test(src) ? '' : 'import java.util.*;\n';
-    return compileAndRun({ 'Main.java': imports + src }, null, ['java', '-Duser.language=en', 'Main.java'], stdin);
+    return compileAndRun({ 'Main.java': imports + src }, ['javac', '-encoding', 'UTF-8', '-nowarn', 'Main.java'], ['java', '-Duser.language=en', '-Dfile.encoding=UTF-8', '-Dstdout.encoding=UTF-8', '-cp', '.', 'Main'], stdin);
   }
   if (lang === 'c') {
     const src = /\bmain\s*\(/.test(code) ? code : `#include <stdio.h>\n#include <string.h>\n#include <stdlib.h>\n#include <stdbool.h>\nint main(void) {\n${code}\nreturn 0;\n}`;
