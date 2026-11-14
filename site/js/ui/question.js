@@ -72,7 +72,7 @@ export function answerInput(q, { lang, value, onChange, locked = false, reveal =
       class: 'input mono',
       type: 'text',
       value: value ?? '',
-      placeholder: q.type === 'predict' ? 'Digite exatamente o que aparece na tela' : 'Digite o trecho que falta',
+      placeholder: q.type === 'predict' ? 'Digite o que aparece na tela (várias linhas? separe com espaço)' : 'Digite o trecho que falta',
       'aria-label': 'Sua resposta',
       autocomplete: 'off',
       spellcheck: 'false',
