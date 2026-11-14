@@ -84,7 +84,7 @@ function compileAndRun(files, compile, runCmd, stdin) {
 }
 
 export function runSnippet(lang, code, stdin = '', { full } = {}) {
-  if (lang === 'python') return exec('python3', ['-c', PY_PRELUDE + code], { input: stdin || '' });
+  if (lang === 'python') return exec('python3', ['-c', PY_PRELUDE + code], { input: stdin || '', cwd: tmpdir() });
   if (lang === 'javascript') return runJs(code, stdin);
   if (lang === 'sql') return exec('python3', ['-c', SQL_RUNNER], { input: code });
   if (lang === 'java') {
