@@ -88,7 +88,7 @@ self.onmessage = async (e) => {
     return realTimeout(() => {
       pending--;
       try { typeof fn === 'function' && fn(...args); } catch (err) { report(err); }
-      done();
+      realTimeout(done, 0);
     }, ms);
   };
   try {

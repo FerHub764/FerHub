@@ -23,7 +23,8 @@ test('JS: saida, erro e loop infinito interrompido', async () => {
     // page still responsive
     const alive = await new Promise((res) => setTimeout(() => res(true), 10));
     const input = await m.runJavaScript('console.log(prompt() + "!")', { stdin: 'Ana' });
-    return { ok, err, loop, elapsed, alive, input };
+    const awaited = await m.runJavaScript('const esperar = (ms) => new Promise((r) => setTimeout(r, ms));\nasync function f() { console.log("a"); await esperar(30); console.log("b"); }\nf();\nconsole.log("c");');
+    return { ok, err, loop, elapsed, alive, input, awaited };
   });
   assert.equal(r.ok.stdout, 'oi [1, 2]\ndepois\n');
   assert.equal(r.ok.error ?? null, null);
@@ -33,6 +34,7 @@ test('JS: saida, erro e loop infinito interrompido', async () => {
   assert.ok(r.elapsed < 3000);
   assert.equal(r.alive, true);
   assert.equal(r.input.stdout, 'Ana!\n');
+  assert.equal(r.awaited.stdout, 'a\nc\nb\n');
 });
 
 test('Web: checkWeb valida elementos, texto e estilo', async () => {

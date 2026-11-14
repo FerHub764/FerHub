@@ -9,6 +9,13 @@ const has = (cmd) => spawnSync('sh', ['-c', `command -v ${cmd}`]).status === 0;
 const TOOLS = {
   python: () => has('python3'),
   javascript: () => true,
+  java: () => has('java'),
+  c: () => has('gcc'),
+  cpp: () => has('g++'),
+  go: () => has('go'),
+  rust: () => has('rustc'),
+  php: () => has('php'),
+  sql: () => has('python3'),
 };
 const cache = {};
 export function available(lang) {
@@ -40,27 +47,71 @@ function exec(cmd, args, { input = '', cwd } = {}) {
 }
 
 function runJs(code, stdin) {
-  // emulate the browser worker: same console formatting
-  const inputs = String(stdin || '').split('\n');
-  let i = 0;
-  let out = '';
-  const log = (...a) => { out += a.map((v) => formatValue(v)).join(' ') + '\n'; };
-  const fakeConsole = { log, info: log, warn: log, error: log, table: log };
-  try {
-    const timers = [];
-    const fakeTimeout = (fn, ms) => timers.push([ms || 0, timers.length, fn]);
-    new Function('console', 'prompt', 'setTimeout', 'alert', '"use strict";\n' + code)(fakeConsole, () => (i < inputs.length ? inputs[i++] : null), fakeTimeout, log);
-    // run timers in time order (single level)
-    timers.sort((a, b) => a[0] - b[0] || a[1] - b[1]).forEach(([, , fn]) => fn());
-    return { stdout: out, error: null };
-  } catch (e) {
-    return { stdout: out, error: `${e.name}: ${e.message}` };
+  // same console formatting as the browser worker, real event loop
+  const prelude = `const formatValue = ${formatValue.toString()};
+const __out = (...a) => process.stdout.write(a.map((v) => formatValue(v)).join(' ') + '\\n');
+console.log = console.info = console.warn = console.error = console.table = __out;
+globalThis.alert = __out;
+const __inputs = require('fs').readFileSync(0, 'utf8').split('\\n');
+let __i = 0;
+globalThis.prompt = () => (__i < __inputs.length ? __inputs[__i++] : null);
+`;
+  const wrapped = `${prelude}\n(async () => { "use strict";\n${code}\n})().catch((e) => { process.stderr.write((e && e.name ? e.name + ': ' + e.message : String(e))); process.exitCode = 1; });`;
+  return exec('node', ['-e', wrapped], { input: stdin || '' });
+}
+
+const SQL_RUNNER = `
+import sqlite3, sys
+code = sys.stdin.read()
+db = sqlite3.connect(':memory:')
+stmts = [s for s in [x.strip() for x in code.split(';')] if s]
+out = []
+for st in stmts:
+    cur = db.execute(st)
+    if st.lower().lstrip('(').startswith(('select', 'with')):
+        out = ['|'.join('NULL' if v is None else str(v) for v in row) for row in cur.fetchall()]
+print('\\n'.join(out))
+`;
+
+function compileAndRun(files, compile, runCmd, stdin) {
+  const d = tmpdir();
+  for (const [name, text] of Object.entries(files)) fs.writeFileSync(path.join(d, name), text);
+  if (compile) {
+    const c = exec(compile[0], compile.slice(1), { cwd: d });
+    if (c.error) return { stdout: '', error: 'compilacao: ' + c.error };
   }
+  return exec(runCmd[0], runCmd.slice(1), { cwd: d, input: stdin || '' });
 }
 
 export function runSnippet(lang, code, stdin = '', { full } = {}) {
   if (lang === 'python') return exec('python3', ['-c', PY_PRELUDE + code], { input: stdin || '' });
   if (lang === 'javascript') return runJs(code, stdin);
+  if (lang === 'sql') return exec('python3', ['-c', SQL_RUNNER], { input: code });
+  if (lang === 'java') {
+    const src = /\bclass\s+\w+/.test(code) ? code : `public class Main {\n  public static void main(String[] args) {\n${code}\n  }\n}`;
+    const imports = /import java\.util/.test(src) ? '' : 'import java.util.*;\n';
+    return compileAndRun({ 'Main.java': imports + src }, null, ['java', '-Duser.language=en', 'Main.java'], stdin);
+  }
+  if (lang === 'c') {
+    const src = /\bmain\s*\(/.test(code) ? code : `#include <stdio.h>\n#include <string.h>\n#include <stdlib.h>\n#include <stdbool.h>\nint main(void) {\n${code}\nreturn 0;\n}`;
+    return compileAndRun({ 'm.c': src }, ['gcc', '-std=c11', '-w', '-o', 'a.out', 'm.c', '-lm'], ['./a.out'], stdin);
+  }
+  if (lang === 'cpp') {
+    const src = /\bmain\s*\(/.test(code) ? code : `#include <bits/stdc++.h>\nusing namespace std;\nint main() {\n${code}\nreturn 0;\n}`;
+    return compileAndRun({ 'm.cpp': src }, ['g++', '-std=c++20', '-w', '-o', 'a.out', 'm.cpp'], ['./a.out'], stdin);
+  }
+  if (lang === 'go') {
+    const src = /package main/.test(code) ? code : `package main\n\nimport "fmt"\n\nfunc main() {\n${code}\n}`;
+    return compileAndRun({ 'main.go': src }, null, ['go', 'run', 'main.go'], stdin);
+  }
+  if (lang === 'rust') {
+    const src = /fn main/.test(code) ? code : `#![allow(unused)]\nfn main() {\n${code}\n}`;
+    return compileAndRun({ 'm.rs': src }, ['rustc', '-A', 'warnings', '-o', 'a.out', 'm.rs'], ['./a.out'], stdin);
+  }
+  if (lang === 'php') {
+    const src = code.trimStart().startsWith('<?php') ? code : '<?php\n' + code;
+    return compileAndRun({ 'm.php': src }, null, ['php', 'm.php'], stdin);
+  }
   return { stdout: '', error: `sem toolchain para ${lang}` };
 }
 
