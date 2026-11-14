@@ -25,7 +25,8 @@ export function inline(text) {
 
 export function codeBlock(code, lang) {
   const l = resolveLang(lang);
-  const label = l ? ` data-lang="${esc(lang)}"` : '';
+  const shown = ['text', 'txt', 'output', 'saida'].includes(l) ? 'saída' : lang;
+  const label = l ? ` data-lang="${esc(shown)}"` : '';
   return `<pre class="code"${label}><code>${highlight(code, l)}</code></pre>`;
 }
 

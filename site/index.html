@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DevTrilhas — Aprenda programação do zero</title>
+  <meta name="description" content="Aprenda programação do zero: Python, JavaScript, HTML, Java, C++ e mais, com módulos, provas, XP e certificado.">
+  <meta name="theme-color" content="#0a0e14">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230a0e14'/%3E%3Cpath d='M8 11l5 5-5 5' stroke='%23ffb547' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M16 22h8' stroke='%23ffb547' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/pages.css">
+  <script>
+    try {
+      var s = JSON.parse(localStorage.getItem('devtrilhas:v1') || 'null');
+      if (s && s.settings && s.settings.theme === 'light') document.documentElement.dataset.theme = 'light';
+    } catch (e) {}
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#app">Pular para o conteúdo</a>
+  <header class="topbar" id="topbar"></header>
+  <main id="app" tabindex="-1" aria-live="polite">
+    <div class="boot">
+      <span class="boot-mark">&gt;_</span>
+      <p>Carregando trilhas…</p>
+    </div>
+  </main>
+  <footer class="site-footer">
+    <p><span class="mono">DevTrilhas</span> · Seu progresso fica salvo só neste navegador. Faça backup no <a href="#/painel">Painel</a>.</p>
+  </footer>
+  <div class="toasts" id="toasts" aria-live="assertive"></div>
+  <noscript><p class="noscript">O DevTrilhas precisa de JavaScript ativado para funcionar.</p></noscript>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
