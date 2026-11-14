@@ -3,5 +3,6 @@ import python from './python/index.js';
 import htmlCss from './html-css/index.js';
 import javascript from './javascript/index.js';
 import java from './java/index.js';
+import cpp from './cpp/index.js';
 
-export const TRACKS = [python, htmlCss, javascript, java];
+export const TRACKS = [python, htmlCss, javascript, java, cpp];
