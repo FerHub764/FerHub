@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Burger House</title>
+  <meta name="theme-color" content="#7C2D12" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-cart" viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></symbol>
+    <symbol id="i-truck" viewBox="0 0 24 24"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></symbol>
+    <symbol id="i-leaf" viewBox="0 0 24 24"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><polygon fill="currentColor" points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></symbol>
+    <symbol id="i-vol" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></symbol>
+    <symbol id="i-mute" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M22 9l-6 6M16 9l6 6"/></symbol>
+    <symbol id="i-motion" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M10 15V9M14 15V9"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+    <symbol id="i-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+    <symbol id="i-bars" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+    <symbol id="i-logo" viewBox="0 0 32 32"><path fill="currentColor" d="M5 14.5C5 9 10 5 16 5s11 4 11 9.5c0 .8-.7 1.5-1.5 1.5h-19C5.7 16 5 15.3 5 14.5Z"/><rect fill="currentColor" x="4" y="18" width="24" height="3.2" rx="1.6"/><path fill="currentColor" d="M5.5 23.5h21c0 2-1.6 3.5-3.5 3.5H9c-1.9 0-3.5-1.5-3.5-3.5Z"/></symbol>
+  </svg>
+
+  <div id="loader" role="status" aria-live="polite">
+    <div class="loader-burger" aria-hidden="true">
+      <span class="lb lb-top"></span><span class="lb lb-lettuce"></span><span class="lb lb-tomato"></span><span class="lb lb-cheese"></span><span class="lb lb-patty"></span><span class="lb lb-bottom"></span>
+    </div>
+    <p data-i18n="loading">Montando seu burger…</p>
+    <div class="loader-bar"><i></i></div>
+  </div>
+
+  <canvas id="stage" aria-hidden="true"></canvas>
+  <div id="cursor" aria-hidden="true"><i></i></div>
+
+  <a class="skip" href="#menu">Pular para o cardápio</a>
+
+  <header class="site-header">
+    <a class="logo" href="#home" aria-label="Burger House — início">
+      <svg class="logo-mark"><use href="#i-logo"/></svg><span>Burger House</span>
+    </a>
+    <nav class="nav" id="nav" aria-label="Principal">
+      <a href="#menu" data-i18n="nav.menu">Cardápio</a>
+      <a href="#specials" data-i18n="nav.specials">Especiais</a>
+      <a href="#about" data-i18n="nav.about">Sobre</a>
+      <a href="#reviews" data-i18n="nav.reviews">Avaliações</a>
+      <a href="#contact" data-i18n="nav.contact">Contato</a>
+    </nav>
+    <div class="header-actions">
+      <a class="btn btn-primary btn-sm hide-sm" href="#menu" data-i18n="cta.order">Peça agora</a>
+      <button class="icon-btn" id="cartBtn" data-i18n-aria="cart.open" aria-label="Abrir carrinho">
+        <svg><use href="#i-cart"/></svg><span class="badge" id="cartCount" hidden>0</span>
+      </button>
+      <div class="toolbar">
+        <button class="tool" id="langBtn" data-i18n-aria="a11y.lang" aria-label="Mudar idioma para inglês">EN</button>
+        <button class="tool" id="muteBtn" data-i18n-aria="a11y.mute" aria-label="Ativar ou desativar som" aria-pressed="false"><svg><use href="#i-vol"/></svg></button>
+        <button class="tool" id="motionBtn" data-i18n-aria="a11y.motion" aria-label="Reduzir movimento" aria-pressed="false"><svg><use href="#i-motion"/></svg></button>
+      </div>
+      <button class="icon-btn show-sm" id="navBtn" data-i18n-aria="a11y.menu" aria-label="Abrir menu" aria-expanded="false" aria-controls="nav"><svg><use href="#i-bars"/></svg></button>
+    </div>
+  </header>
+
+  <main>
+    <!-- HERO -->
+    <section id="home" class="hero">
+      <div class="hero-copy">
+        <p class="pill" data-i18n="hero.badge">🔥 O burger nº 1 da cidade</p>
+        <h1 class="hero-title">
+          <span data-i18n="hero.l1">Prove o</span>
+          <span class="hot" data-i18n="hero.l2">Burger</span>
+          <span class="hot" data-i18n="hero.l3">Perfeito</span>
+        </h1>
+        <p class="lead" data-i18n="hero.p">Grelhado na hora, cheio de sabor e feito com carinho. Descubra o burger de que todo mundo está falando.</p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="#menu"><span data-i18n="cta.order">Peça agora</span> 🍔</a>
+          <a class="btn btn-glass" href="#menu" data-i18n="cta.view">Ver cardápio</a>
+        </div>
+      </div>
+      <div class="hero-stage" data-stage="hero">
+        <a class="btn btn-glass btn-sm build-chip" href="#build" data-i18n="cta.build">Monte o seu</a>
+        <p class="hint" data-i18n="hint">Arraste para girar · clique numa camada</p>
+      </div>
+      <ul class="features">
+        <li><span class="ibox"><svg><use href="#i-truck"/></svg></span><div><b data-i18n="f1.t">Entrega rápida</b><small data-i18n="f1.s">Na sua porta</small></div></li>
+        <li><span class="ibox"><svg><use href="#i-leaf"/></svg></span><div><b data-i18n="f2.t">Ingredientes frescos</b><small data-i18n="f2.s">100% naturais</small></div></li>
+        <li><span class="ibox"><svg><use href="#i-star"/></svg></span><div><b data-i18n="f3.t">Nota 4.9</b><small data-i18n="f3.s">De mais de 10 mil clientes</small></div></li>
+      </ul>
+    </section>
+
+    <!-- CAMADAS (scroll explode) -->
+    <section id="layers" class="layers">
+      <div class="layers-sticky">
+        <div class="layers-copy">
+          <h2 data-i18n="layers.h">Camada por camada</h2>
+          <p data-i18n="layers.p">Role para desmontar o burger e ver cada ingrediente. Ele se monta de novo no fim.</p>
+          <ol class="layer-list" id="layerList"></ol>
+        </div>
+        <div class="layers-stage" data-stage="layers"></div>
+      </div>
+    </section>
+
+    <!-- MENU -->
+    <section id="menu" class="section">
+      <div class="section-head"><h2 data-i18n="menu.h">Cardápio</h2><p data-i18n="menu.p">Passe o mouse para girar cada burger.</p></div>
+      <div class="menu-grid" id="menuGrid"></div>
+    </section>
+
+    <!-- SPECIALS -->
+    <section id="specials" class="section">
+      <div class="section-head"><h2 data-i18n="specials.h">Especiais da semana</h2><p data-i18n="specials.p">Combos com desconto. Arraste ou use as setas.</p></div>
+      <div class="carousel" id="carousel" tabindex="0" aria-roledescription="carrossel">
+        <div class="ring" id="ring"></div>
+      </div>
+      <div class="carousel-nav">
+        <button class="icon-btn" id="prevBtn" data-i18n-aria="prev" aria-label="Anterior"><svg><use href="#i-left"/></svg></button>
+        <div class="dots" id="dots"></div>
+        <button class="icon-btn" id="nextBtn" data-i18n-aria="next" aria-label="Próximo"><svg><use href="#i-right"/></svg></button>
+      </div>
+    </section>
+
+    <!-- BUILD -->
+    <section id="build" class="build">
+      <div class="build-stage" data-stage="build"></div>
+      <div class="build-panel glass">
+        <h2 data-i18n="build.h">Monte o seu</h2>
+        <p data-i18n="build.p">Adicione ou tire ingredientes e veja o burger mudar na hora.</p>
+        <ul class="build-list" id="buildList"></ul>
+        <div class="build-total"><span data-i18n="build.total">Total</span><output id="buildPrice">R$ 0,00</output></div>
+        <button class="btn btn-primary btn-block" id="buildAdd" data-i18n="build.add">Adicionar ao carrinho</button>
+      </div>
+    </section>
+
+    <!-- ABOUT -->
+    <section id="about" class="section about">
+      <div class="about-copy">
+        <h2 data-i18n="about.h">Nossa história</h2>
+        <p data-i18n="about.p1"></p>
+        <p data-i18n="about.p2"></p>
+        <dl class="stats">
+          <div><dt>12</dt><dd data-i18n="about.s1">anos na brasa</dd></div>
+          <div><dt>800+</dt><dd data-i18n="about.s2">burgers por dia</dd></div>
+          <div><dt>100%</dt><dd data-i18n="about.s3">ingredientes locais</dd></div>
+        </dl>
+      </div>
+      <figure class="grill glass">
+        <canvas id="grill" aria-label="Chapa com hambúrgueres grelhando" role="img"></canvas>
+        <figcaption data-i18n="about.hint">Clique numa carne para virá-la.</figcaption>
+      </figure>
+    </section>
+
+    <!-- REVIEWS -->
+    <section id="reviews" class="section">
+      <div class="section-head"><h2 data-i18n="reviews.h">O que dizem por aí</h2><p data-i18n="reviews.p">4.9 de média em mais de 10 mil avaliações.</p></div>
+      <div class="reviews" id="reviewsGrid"></div>
+    </section>
+
+    <!-- CONTACT -->
+    <section id="contact" class="section contact">
+      <form class="glass contact-form" id="contactForm" novalidate>
+        <h2 data-i18n="contact.h">Fale com a gente</h2>
+        <p data-i18n="contact.p">Reservas, eventos ou só um oi.</p>
+        <label><span data-i18n="contact.name">Nome</span><input name="name" autocomplete="name" required /></label>
+        <label><span data-i18n="contact.email">E-mail</span><input name="email" type="email" autocomplete="email" required /></label>
+        <label><span data-i18n="contact.msg">Mensagem</span><textarea name="msg" rows="4" required></textarea></label>
+        <button class="btn btn-primary" type="submit" data-i18n="contact.send">Enviar mensagem</button>
+        <p class="form-status" id="formStatus" role="status" aria-live="polite"></p>
+      </form>
+      <div class="map glass">
+        <svg viewBox="0 0 400 300" role="img" aria-label="Mapa estilizado com a localização da Burger House">
+          <defs><pattern id="blocks" width="40" height="40" patternUnits="userSpaceOnUse"><rect width="40" height="40" fill="none"/><rect x="4" y="4" width="32" height="32" rx="4" fill="rgba(255,200,160,.06)"/></pattern></defs>
+          <rect width="400" height="300" fill="url(#blocks)"/>
+          <path d="M0 210 C120 190 180 240 400 170" stroke="rgba(255,170,110,.35)" stroke-width="14" fill="none"/>
+          <path d="M150 0 L210 300" stroke="rgba(255,170,110,.25)" stroke-width="10"/>
+          <path d="M0 80 L400 120" stroke="rgba(255,170,110,.2)" stroke-width="8"/>
+          <path d="M300 0 L270 300" stroke="rgba(255,170,110,.15)" stroke-width="6"/>
+          <circle cx="60" cy="40" r="26" fill="rgba(80,160,60,.25)"/><circle cx="340" cy="250" r="34" fill="rgba(80,160,60,.22)"/>
+          <g class="pin" transform="translate(196 150)"><circle r="26" fill="rgba(255,106,19,.25)" class="pulse"/><path d="M0 -34c-12 0-20 9-20 19 0 14 20 30 20 30s20-16 20-30c0-10-8-19-20-19Z" fill="#FF6A13"/><circle cy="-15" r="7" fill="#fff"/></g>
+        </svg>
+        <ul class="map-info">
+          <li><svg><use href="#i-pin"/></svg><span data-i18n="contact.addr"></span></li>
+          <li><svg><use href="#i-clock"/></svg><span data-i18n="contact.hours"></span></li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer"><svg class="logo-mark"><use href="#i-logo"/></svg><span data-i18n="footer">Burger House · Feito na brasa desde 2014</span></footer>
+
+  <div id="layerTip" class="layer-tip glass" role="status" aria-live="polite" hidden><b></b><p></p></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <div class="scrim" id="scrim" hidden></div>
+  <aside class="cart glass" id="cart" aria-labelledby="cartTitle" aria-hidden="true" inert>
+    <div class="cart-head"><h2 id="cartTitle" data-i18n="cart.h">Seu pedido</h2><button class="icon-btn" id="cartClose" data-i18n-aria="cart.close" aria-label="Fechar carrinho"><svg><use href="#i-x"/></svg></button></div>
+    <ul class="cart-items" id="cartItems"></ul>
+    <p class="cart-empty" id="cartEmpty" data-i18n="cart.empty"></p>
+    <div class="cart-foot">
+      <div class="build-total"><span data-i18n="cart.total">Total</span><output id="cartTotal">R$ 0,00</output></div>
+      <button class="btn btn-primary btn-block" id="checkout" data-i18n="cart.checkout">Finalizar pedido</button>
+    </div>
+  </aside>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
