@@ -69,7 +69,7 @@ function runner(opts) {
         h('span', { class: 'mono' }, `Questão ${index + 1} de ${questions.length}`),
         h('span', { class: 'mono faint' }, `${answeredCount()} respondida(s)`)),
       dots,
-      h('section', { class: 'quiz-card card' },
+      h('section', { class: 'quiz-card card', dataset: { qid: q.id } },
         h('span', { class: 'pill pill-blue' }, typeLabel(q.type)),
         h('div', { class: 'prose quiz-prompt', html: renderMarkdown(q.prompt) }),
         answerInput(q, {

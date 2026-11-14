@@ -117,6 +117,12 @@ export function toast(message, { kind = '', emoji = '', duration = 3200 } = {}) 
     emoji ? h('span', { class: 'toast-icon', 'aria-hidden': 'true' }, emoji) : null,
     h('div', null, message));
   host.appendChild(el);
+  const live = host.querySelectorAll('.toast:not(.leaving)');
+  if (live.length > 3) {
+    const oldest = live[0];
+    oldest.classList.add('leaving');
+    setTimeout(() => oldest.remove(), 320);
+  }
   setTimeout(() => {
     el.classList.add('leaving');
     setTimeout(() => el.remove(), 320);
