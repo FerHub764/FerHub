@@ -68,7 +68,7 @@ export const Menu: React.FC = () => {
         if (frame < at - 2 || (out !== undefined && frame > out + 14)) return null;
         return (
           <div key={m.word} style={{ position: "absolute", top: 760, left: 0, right: 0, ...center }}>
-            <Rise at={at} out={out} dur={14} style={{ fontFamily: SERIF, fontWeight: 800, fontSize: 132, color: C.cream, lineHeight: 1.02 }}>
+            <Rise at={at} out={out} dur={14} style={{ fontFamily: SERIF, fontWeight: 800, fontSize: "size" in m ? (m as { size: number }).size : 132, color: C.cream, lineHeight: 1.02, whiteSpace: "nowrap" }}>
               {m.word}
             </Rise>
             <div style={{ height: 26 }} />
