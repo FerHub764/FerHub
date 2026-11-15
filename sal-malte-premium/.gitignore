@@ -1,0 +1,4 @@
+node_modules/
+out/
+music/out/
+blender/renders/*.log

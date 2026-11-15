@@ -1,0 +1,24 @@
+{
+  "fps": 30,
+  "bpm": 120,
+  "beat": 15,
+  "total": 900,
+  "scenes": {
+    "hero": [0, 120],
+    "menu": [120, 240],
+    "music": [240, 360],
+    "family": [360, 480],
+    "build": [480, 540],
+    "drop": [540, 690],
+    "end": [690, 900]
+  },
+  "menu": [
+    { "at": 120, "word": "Chopp gelado.", "sub": "tirado na hora" },
+    { "at": 150, "word": "Parmegiana", "sub": "no pão" },
+    { "at": 180, "word": "Porções", "sub": "de boteco" },
+    { "at": 210, "word": "Drinks", "sub": "autorais" }
+  ],
+  "breath": 525,
+  "drop": 540,
+  "endHit": 690
+}
