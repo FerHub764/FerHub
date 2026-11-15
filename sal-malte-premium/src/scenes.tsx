@@ -165,7 +165,7 @@ export const Family: React.FC = () => {
   const frame = useCurrentFrame();
   const items = [
     ["Espaço Kids", "e cardápio infantil"],
-    ["Pet friendly", "na área interna e externa"],
+    ["Reservas", "pelo WhatsApp (11) 97054-6124"],
     ["Aniversários", "e confraternizações"],
     ["Acessível", "Wi-Fi grátis · valet"],
   ];
