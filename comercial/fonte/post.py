@@ -88,7 +88,7 @@ def draw_super(canvas, text, alpha, t_rel):
     d = ImageDraw.Draw(layer)
     tw = d.textlength(text, font=font_super)
     x = (OUT_W - tw) / 2
-    y = BAR + IMG_H - 118 + (1 - alpha) * 10
+    y = BAR + IMG_H + 44 + (1 - alpha) * 6
     sh = Image.new('RGBA', canvas.size, (0, 0, 0, 0))
     ImageDraw.Draw(sh).text((x, y + 2), text, font=font_super, fill=(0, 0, 0, int(170 * alpha)))
     sh = sh.filter(ImageFilter.GaussianBlur(6))
