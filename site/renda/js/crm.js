@@ -4,7 +4,7 @@ import {
   dadosDemo, estadoVazio,
 } from './crm-core.js';
 import { METODOS } from './data.js';
-import { carregar, salvar, aoMudar } from './store.js';
+import { carregar, salvar, aoMudar, aoErro, remoto, sessaoAtual, entrar, sair, sincronizar, ouvirMudancas, souMembro } from './store.js';
 import { $, $$, esc, real, pct, data, dataHora, telefoneBonito, toast, iniciarTema, baixar } from './ui.js';
 
 iniciarTema();
@@ -24,7 +24,18 @@ function commit(novo, msg) {
   state = salvar(novo);
   if (msg) toast(msg);
 }
-aoMudar((s) => { state = s; render(); if (leadAberto) renderGaveta(); });
+aoMudar((s) => {
+  state = s;
+  render();
+  if (leadAberto) {
+    // preserva o que estiver sendo digitado na ficha quando chega atualização de outra pessoa
+    const rascunho = $('#g-nota-txt')?.value;
+    const editando = Boolean($('#g-editar'));
+    if (!editando) renderGaveta();
+    if (rascunho && $('#g-nota-txt')) $('#g-nota-txt').value = rascunho;
+  }
+});
+aoErro((e) => toast(e.message, 'erro'));
 
 // ---------- Opções de selects ----------
 const opcoesEtapa = (vazio) => (vazio ? `<option value="">${vazio}</option>` : '') + ETAPAS.map((e) => `<option value="${e.id}">${esc(e.nome)}</option>`).join('');
@@ -536,4 +547,76 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-irPara(location.hash.slice(1) || 'painel');
+// ---------- Conexão e inicialização ----------
+function renderConexao(email) {
+  $('#status-conexao').innerHTML = remoto
+    ? `<p class="status-linha"><span class="status-ponto on"></span>Conectado ao banco online (Supabase)</p>
+       <p>Os contatos ficam no banco da equipe e todo mundo vê as mudanças em tempo real. Você entrou como <strong>${esc(email || '')}</strong>.</p>
+       <div class="linha-btns"><button class="btn btn-secundario" type="button" id="btn-sincronizar">Sincronizar agora</button><button class="btn btn-secundario" type="button" id="btn-sair">Sair</button></div>`
+    : `<p class="status-linha"><span class="status-ponto"></span>Modo local: dados só neste navegador</p>
+       <p>O site e o CRM compartilham os contatos quando abertos no mesmo navegador. Para a equipe usar junto, de qualquer lugar, preencha <code>js/config.js</code> com os dados do Supabase (veja <code>supabase/LEIAME.md</code> no repositório). Respeite a LGPD: guarde só o necessário e atenda pedidos de exclusão.</p>`;
+}
+document.addEventListener('click', async (e) => {
+  if (e.target.id === 'btn-sair') { await sair(); location.reload(); }
+  if (e.target.id === 'btn-sincronizar') {
+    try { const r = await sincronizar(); toast(r.novos ? `${r.novos} novos contatos do site.` : 'Tudo atualizado.'); }
+    catch (err) { toast(err.message, 'erro'); }
+  }
+});
+
+async function abrirCRM(sessao) {
+  $('#tela-login').hidden = true;
+  $('#carregando').hidden = false;
+  try {
+    if (!(await souMembro())) {
+      await sair();
+      $('#carregando').hidden = true;
+      $('#tela-login').hidden = false;
+      $('#login-erros').textContent = `O e-mail ${sessao?.user?.email || ''} entrou, mas não está autorizado no CRM. Adicione-o na tabela crm_membros do Supabase.`;
+      return;
+    }
+    const r = await sincronizar();
+    await ouvirMudancas();
+    if (r.novos) toast(`${r.novos} ${r.novos === 1 ? 'novo contato chegou' : 'novos contatos chegaram'} pelo site.`);
+  } catch (err) {
+    const msg = /permission|policy|row-level/i.test(err.message)
+      ? 'Seu e-mail não está na lista de membros do CRM. Peça para adicioná-lo na tabela crm_membros.'
+      : `Não foi possível carregar os dados: ${err.message}`;
+    toast(msg, 'erro');
+  }
+  $('#carregando').hidden = true;
+  $('#app').hidden = false;
+  state = carregar();
+  renderConexao(sessao?.user?.email);
+  irPara(location.hash.slice(1) || 'painel');
+}
+
+async function iniciar() {
+  if (!remoto) {
+    renderConexao();
+    irPara(location.hash.slice(1) || 'painel');
+    return;
+  }
+  $('#app').hidden = true;
+  $('#carregando').hidden = false;
+  let sessao = null;
+  try { sessao = await sessaoAtual(); } catch (err) { toast(`Sem conexão com o banco: ${err.message}`, 'erro'); }
+  $('#carregando').hidden = true;
+  if (sessao) return abrirCRM(sessao);
+  $('#tela-login').hidden = false;
+  $('#l-email').focus();
+  $('#form-login').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const botao = $('#form-login button');
+    botao.disabled = true;
+    $('#login-erros').textContent = '';
+    try {
+      abrirCRM(await entrar($('#l-email').value.trim(), $('#l-senha').value));
+    } catch (err) {
+      $('#login-erros').textContent = err.message;
+    } finally {
+      botao.disabled = false;
+    }
+  });
+}
+iniciar();

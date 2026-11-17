@@ -14,7 +14,21 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23f4b63f'/%3E%3Cpath d='M9 17l7-7 7 7v7H9z' fill='%2313233a'/%3E%3C/svg%3E">
 </head>
 <body>
-  <div class="app">
+  <div class="login" id="tela-login" hidden>
+    <form class="login-cartao" id="form-login" novalidate>
+      <svg viewBox="0 0 32 32" width="40" height="40" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="var(--moeda)"/><path d="M9 17l7-7 7 7v7H9z" fill="#13233a"/><rect x="14" y="19" width="4" height="5" fill="var(--moeda)"/></svg>
+      <h1>Entrar no CRM</h1>
+      <p>Use o e-mail e a senha cadastrados pela equipe no Supabase.</p>
+      <div class="campo"><label for="l-email">E-mail</label><input id="l-email" type="email" autocomplete="username" required></div>
+      <div class="campo"><label for="l-senha">Senha</label><input id="l-senha" type="password" autocomplete="current-password" required></div>
+      <div class="form-erros" id="login-erros" role="alert"></div>
+      <button class="btn btn-primario" type="submit">Entrar</button>
+      <a href="index.html">Voltar ao site</a>
+    </form>
+  </div>
+  <div class="carregando" id="carregando" hidden><span>Carregando contatos…</span></div>
+
+  <div class="app" id="app">
     <aside class="lateral">
       <a class="marca" href="index.html" title="Voltar ao site">
         <svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="var(--moeda)"/><path d="M9 17l7-7 7 7v7H9z" fill="var(--tinta)"/><rect x="14" y="19" width="4" height="5" fill="var(--moeda)"/></svg>
@@ -187,9 +201,9 @@
             <p>Remove todos os contatos e tarefas deste navegador. Baixe um backup antes.</p>
             <button class="btn btn-perigo" type="button" id="btn-limpar">Apagar todos os dados</button>
           </article>
-          <article class="painel painel-largo">
+          <article class="painel painel-largo" id="painel-conexao">
             <h2>Onde ficam os dados</h2>
-            <p>Os contatos ficam salvos neste navegador e o site e o CRM conversam entre si quando abertos no mesmo navegador. Para uma equipe usar ao mesmo tempo, conecte um banco de dados ou serviço como Google Planilhas, Supabase ou Firebase, e respeite a LGPD: guarde só o necessário e atenda pedidos de exclusão.</p>
+            <div id="status-conexao"></div>
           </article>
         </div>
       </section>

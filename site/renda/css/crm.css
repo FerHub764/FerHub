@@ -2,6 +2,20 @@ body { font-size: 1rem; }
 
 .app { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
 
+/* ---------- Login ---------- */
+.login { min-height: 100vh; display: grid; place-items: center; padding: 16px; background: var(--tinta); }
+.login-cartao {
+  width: min(400px, 100%); background: var(--cartao); border-radius: var(--r-grande); padding: 2rem;
+  display: grid; gap: 1rem; box-shadow: var(--sombra);
+}
+.login-cartao h1 { font-size: 1.8rem; margin: 0; }
+.login-cartao p { margin: 0; color: var(--tinta-2); }
+.login-cartao a { justify-self: center; font-size: 0.95rem; }
+.carregando { position: fixed; inset: 0; display: grid; place-items: center; background: var(--papel); z-index: 60; font-weight: 700; color: var(--tinta-2); }
+.status-linha { display: flex; align-items: center; gap: 0.6rem; font-weight: 700; margin-bottom: 0.6rem; }
+.status-ponto { width: 10px; height: 10px; border-radius: 50%; background: var(--tinta-3); flex: none; }
+.status-ponto.on { background: var(--verde); box-shadow: 0 0 0 4px var(--verde-claro); }
+
 /* ---------- Lateral ---------- */
 .lateral {
   position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; gap: 1.5rem;

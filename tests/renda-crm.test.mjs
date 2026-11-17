@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   estadoVazio, adicionarLead, validarLead, moverEtapa, adicionarNota, atualizarLead, removerLead,
   adicionarTarefa, alternarTarefa, filtrarLeads, metricas, paraCSV, lerCSV, importarCSV, dadosDemo, pontuarLead,
+  diferencas, processarInscricoes, estadoDeLinhas,
 } from '../site/renda/js/crm-core.js';
 import { recomendar, calcularRenda, METODOS } from '../site/renda/js/data.js';
 
@@ -138,6 +139,44 @@ test('recomendação respeita perfil, investimento e urgência', () => {
   const cozinha = recomendar({ perfis: ['cozinha'], investimento: 2, urgencia: 2 });
   assert.equal(cozinha[0].metodo.id, 'doces');
   assert.equal(r.length, METODOS.length);
+});
+
+test('diferencas aponta o que gravar e apagar', () => {
+  let a = adicionarLead(estadoVazio(), { nome: 'A', email: 'a@exemplo.com' }, AGORA).state;
+  a = adicionarLead(a, { nome: 'B', email: 'b@exemplo.com' }, AGORA).state;
+  const [lb, la] = a.leads;
+  let b = moverEtapa(a, la.id, 'cliente', AGORA + 1);
+  b = removerLead(b, lb.id);
+  b = adicionarTarefa(b, { titulo: 'T' }, AGORA);
+  const d = diferencas(a, b);
+  assert.deepEqual(d.leads.gravar.map((x) => x.id), [la.id]);
+  assert.deepEqual(d.leads.apagar, [lb.id]);
+  assert.equal(d.tarefas.gravar.length, 1);
+  assert.deepEqual(diferencas(b, b).leads, { gravar: [], apagar: [] });
+});
+
+test('ids não colidem entre clientes com o mesmo contador', () => {
+  const x = adicionarLead(estadoVazio(), { nome: 'X', email: 'x@exemplo.com' }, AGORA).lead.id;
+  const y = adicionarLead(estadoVazio(), { nome: 'Y', email: 'y@exemplo.com' }, AGORA).lead.id;
+  assert.notEqual(x, y);
+});
+
+test('inscrições do formulário viram contatos sem duplicar', () => {
+  let s = adicionarLead(estadoVazio(), { nome: 'Ana', email: 'ana@exemplo.com' }, AGORA).state;
+  const r = processarInscricoes(s, [
+    { nome: 'Ana', email: 'ana@exemplo.com', interesse: 'aulas', origem: 'teste', consentimento: true, criado_em: '2026-11-17T10:00:00Z' },
+    { nome: 'Bia', telefone: '11912345678', horas_semana: 30, recomendacoes: ['doces'], consentimento: true },
+    { nome: '', email: 'x@exemplo.com' },
+  ], AGORA);
+  assert.equal(r.novos, 1);
+  assert.equal(r.erros.length, 1);
+  assert.equal(r.state.leads.length, 2);
+  const bia = r.state.leads.find((l) => l.nome === 'Bia');
+  assert.equal(bia.horasSemana, 30);
+  assert.equal(bia.consentimento, true);
+  assert.equal(r.state.leads.find((l) => l.nome === 'Ana').interesse, 'aulas');
+  const volta = estadoDeLinhas(r.state.leads.map((d) => ({ id: d.id, dados: d })), []);
+  assert.equal(volta.leads.length, 2);
 });
 
 test('calculadora desconta taxa e custo sem ficar negativa', () => {

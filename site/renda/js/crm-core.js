@@ -25,8 +25,10 @@ export function estadoVazio() {
   return { versao: 1, leads: [], tarefas: [], seq: 1 };
 }
 
+// IDs únicos mesmo com várias pessoas criando contatos ao mesmo tempo
 function novoId(state, prefixo) {
-  const id = `${prefixo}${state.seq}`;
+  const aleatorio = Math.random().toString(36).slice(2, 7);
+  const id = `${prefixo}${state.seq}-${aleatorio}`;
   state.seq += 1;
   return id;
 }
@@ -256,6 +258,64 @@ export function metricas(state, agora = Date.now(), dias = 14) {
     tarefasAtrasadas: atrasadas,
     interesses,
   };
+}
+
+// ---------- Sincronização com banco remoto ----------
+
+/** O que mudou entre dois estados: registros para gravar e ids para apagar. */
+export function diferencas(antes, depois) {
+  const r = {};
+  for (const k of ['leads', 'tarefas']) {
+    const anterior = new Map((antes?.[k] || []).map((x) => [x.id, JSON.stringify(x)]));
+    const presentes = new Set();
+    r[k] = { gravar: [], apagar: [] };
+    for (const x of depois[k]) {
+      presentes.add(x.id);
+      if (anterior.get(x.id) !== JSON.stringify(x)) r[k].gravar.push(x);
+    }
+    for (const id of anterior.keys()) if (!presentes.has(id)) r[k].apagar.push(id);
+  }
+  return r;
+}
+
+/** Monta o estado a partir das linhas do banco ({ id, dados }). */
+export function estadoDeLinhas(linhasLeads, linhasTarefas) {
+  const s = estadoVazio();
+  s.leads = linhasLeads.map((l) => l.dados).sort((a, b) => b.criadoEm - a.criadoEm);
+  s.tarefas = linhasTarefas.map((t) => t.dados).sort((a, b) => b.criadaEm - a.criadaEm);
+  s.seq = s.leads.length + s.tarefas.length + 1;
+  return s;
+}
+
+/** Converte inscrições do formulário público em contatos (com deduplicação). */
+export function processarInscricoes(state, inscricoes, agora = Date.now()) {
+  let s = state;
+  const erros = [];
+  let novos = 0;
+  for (const i of inscricoes) {
+    try {
+      const r = adicionarLead(
+        s,
+        {
+          nome: i.nome,
+          email: i.email || '',
+          telefone: i.telefone || '',
+          interesse: i.interesse || '',
+          horasSemana: i.horas_semana || 0,
+          origem: i.origem || 'site',
+          recomendacoes: Array.isArray(i.recomendacoes) ? i.recomendacoes : [],
+          consentimento: Boolean(i.consentimento),
+          criadoEm: i.criado_em ? Date.parse(i.criado_em) : undefined,
+        },
+        agora,
+      );
+      s = r.state;
+      if (!r.duplicado) novos++;
+    } catch (e) {
+      erros.push(`${i.nome || 'sem nome'}: ${e.message}`);
+    }
+  }
+  return { state: s, novos, erros };
 }
 
 // ---------- CSV ----------

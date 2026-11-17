@@ -13,9 +13,9 @@ Site sobre como ganhar dinheiro trabalhando de casa, com CRM integrado.
 
 ## Como funciona
 
-HTML, CSS e JavaScript puros, sem etapa de build. Os contatos ficam no `localStorage` do navegador;
-o site e o CRM compartilham os dados quando abertos no mesmo navegador (inclusive entre abas).
-Para uso em equipe, troque `js/store.js` por um backend (Supabase, Firebase, Google Planilhas).
+HTML, CSS e JavaScript puros, sem etapa de build. Dois modos de dados:
+- **Local** (padrão): `localStorage`; site e CRM compartilham dados no mesmo navegador.
+- **Online**: Supabase com login, regras de segurança e tempo real. Veja `supabase/LEIAME.md`.
 
 A lógica do CRM fica em `js/crm-core.js` (funções puras) e é testada em `tests/renda-crm.test.mjs`:
 

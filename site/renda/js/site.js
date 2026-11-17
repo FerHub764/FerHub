@@ -1,6 +1,6 @@
 import { METODOS, CATEGORIAS, NIVEL_INVESTIMENTO, PERGUNTAS, recomendar, calcularRenda } from './data.js';
-import { adicionarLead } from './crm-core.js';
-import { carregar, salvar, preferencia } from './store.js';
+import { adicionarLead, validarLead } from './crm-core.js';
+import { carregar, salvar, preferencia, remoto, enviarInscricao } from './store.js';
 import { $, $$, esc, real, toast, iniciarTema } from './ui.js';
 
 iniciarTema();
@@ -334,8 +334,10 @@ function irParaFormulario(id) {
   setTimeout(() => $('#f-nome').focus({ preventScroll: true }), 450);
 }
 
-form.addEventListener('submit', (e) => {
+let enviando = false;
+form.addEventListener('submit', async (e) => {
   e.preventDefault();
+  if (enviando) return;
   const fd = new FormData(form);
   const errosEl = $('#form-erros');
   $$('[aria-invalid]', form).forEach((i) => i.removeAttribute('aria-invalid'));
@@ -346,18 +348,35 @@ form.addEventListener('submit', (e) => {
   }
   let quizSalvo = null;
   try { quizSalvo = JSON.parse(preferencia('quiz') || 'null'); } catch { /* sem teste */ }
+  const dados = {
+    nome: String(fd.get('nome') || '').trim(),
+    email: String(fd.get('email') || '').trim(),
+    telefone: fd.get('telefone'),
+    interesse: fd.get('interesse'),
+    horasSemana: fd.get('horasSemana'),
+    origem: quizSalvo ? 'teste' : 'site',
+    recomendacoes: quizSalvo?.top || [],
+    consentimento: true,
+  };
+  const botao = $('button[type=submit]', form);
   try {
-    const { state, lead, duplicado } = adicionarLead(carregar(), {
-      nome: fd.get('nome'),
-      email: fd.get('email'),
-      telefone: fd.get('telefone'),
-      interesse: fd.get('interesse'),
-      horasSemana: fd.get('horasSemana'),
-      origem: quizSalvo ? 'teste' : 'site',
-      recomendacoes: quizSalvo?.top || [],
-      consentimento: true,
-    });
-    salvar(state);
+    let lead;
+    let duplicado = false;
+    if (remoto) {
+      const erros = validarLead(dados);
+      if (erros.length) throw Object.assign(new Error(erros.join(' ')), { erros });
+      enviando = true;
+      botao.disabled = true;
+      botao.textContent = 'Enviando…';
+      dados.telefone = String(dados.telefone || '').replace(/\D/g, '');
+      await enviarInscricao(dados);
+      lead = dados;
+    } else {
+      const r = adicionarLead(carregar(), dados);
+      salvar(r.state);
+      lead = r.lead;
+      duplicado = r.duplicado;
+    }
     errosEl.innerHTML = '';
     form.hidden = true;
     const ok = $('#form-ok');
@@ -375,6 +394,10 @@ form.addEventListener('submit', (e) => {
     if (/e-mail/i.test(err.message)) $('#f-email').setAttribute('aria-invalid', 'true');
     if (/WhatsApp/i.test(err.message)) $('#f-tel').setAttribute('aria-invalid', 'true');
     $('[aria-invalid="true"]', form)?.focus();
+  } finally {
+    enviando = false;
+    botao.disabled = false;
+    botao.textContent = 'Receber meu plano';
   }
 });
 $('#ok-novo').addEventListener('click', () => {
