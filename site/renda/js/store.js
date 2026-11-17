@@ -5,7 +5,7 @@ import { estadoVazio, diferencas, estadoDeLinhas, processarInscricoes } from './
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
 
 const CHAVE = 'renda-em-casa:crm:v1';
-const SUPABASE_CDN = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm';
+const SUPABASE_CDN = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/+esm';
 
 export const remoto = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
