@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Renda em Casa</title>
+  <meta name="description" content="Descubra formas reais de ganhar dinheiro trabalhando de casa: calculadora de renda, teste de perfil, 12 caminhos explicados, alerta de golpes e plano de 30 dias.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&display=swap">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/site.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23f4b63f'/%3E%3Cpath d='M9 17l7-7 7 7v7H9z' fill='%2313233a'/%3E%3C/svg%3E">
+</head>
+<body>
+  <a class="pular" href="#conteudo">Pular para o conteúdo</a>
+
+  <header class="topo">
+    <div class="topo-in">
+      <a class="marca" href="#" aria-label="Renda em Casa, início">
+        <svg viewBox="0 0 32 32" width="30" height="30" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="var(--moeda)"/><path d="M9 17l7-7 7 7v7H9z" fill="var(--tinta)"/><rect x="14" y="19" width="4" height="5" fill="var(--moeda)"/></svg>
+        <span>Renda em Casa</span>
+      </a>
+      <button class="menu-btn" aria-expanded="false" aria-controls="nav">Menu</button>
+      <nav id="nav" class="nav">
+        <a href="#calculadora">Calculadora</a>
+        <a href="#teste">Teste de perfil</a>
+        <a href="#caminhos">Caminhos</a>
+        <a href="#golpes">Golpes</a>
+        <a href="#plano">Plano de 30 dias</a>
+        <a href="crm.html" class="nav-crm">Abrir CRM</a>
+        <button class="tema-btn" type="button" aria-label="Alternar tema claro e escuro" title="Alternar tema">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z"/></svg>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <main id="conteudo">
+    <!-- HERO + CALCULADORA -->
+    <section class="hero" id="calculadora">
+      <div class="hero-texto">
+        <h1>Quanto dá para ganhar de casa? Faça a conta antes de começar.</h1>
+        <p class="hero-sub">Arraste os controles e veja quanto sobra no fim do mês, já descontando taxas e custos. Depois descubra qual dos 12 caminhos combina com o seu tempo e o que você sabe fazer.</p>
+        <div class="hero-acoes">
+          <a class="btn btn-primario" href="#teste">Fazer o teste de perfil</a>
+          <a class="btn btn-secundario" href="#caminhos">Ver os 12 caminhos</a>
+        </div>
+        <p class="hero-nota">Sem promessa de renda fácil. Aqui você encontra números realistas e um plano de ação.</p>
+      </div>
+
+      <div class="recibo" role="group" aria-labelledby="recibo-titulo">
+        <div class="recibo-topo">
+          <h2 id="recibo-titulo">Seu mês trabalhando de casa</h2>
+          <label class="sr-only" for="calc-metodo">Preencher com valores de um caminho</label>
+          <select id="calc-metodo" class="recibo-select"></select>
+        </div>
+
+        <div class="controle">
+          <div class="controle-cab"><label for="calc-horas">Horas por semana</label><output id="out-horas" for="calc-horas">10 h</output></div>
+          <input type="range" id="calc-horas" min="1" max="44" value="10">
+        </div>
+        <div class="controle">
+          <div class="controle-cab"><label for="calc-valor">Quanto você cobra por hora</label><output id="out-valor" for="calc-valor">R$ 35</output></div>
+          <input type="range" id="calc-valor" min="10" max="200" step="5" value="35">
+        </div>
+        <div class="controle">
+          <div class="controle-cab"><label for="calc-taxa">Taxa de plataforma ou maquininha</label><output id="out-taxa" for="calc-taxa">10%</output></div>
+          <input type="range" id="calc-taxa" min="0" max="30" value="10">
+        </div>
+        <div class="controle">
+          <div class="controle-cab"><label for="calc-custo">Custos fixos no mês (internet, material, MEI)</label><output id="out-custo" for="calc-custo">R$ 120</output></div>
+          <input type="range" id="calc-custo" min="0" max="1500" step="10" value="120">
+        </div>
+
+        <dl class="recibo-linhas" aria-live="polite">
+          <div><dt>Bruto no mês</dt><dd id="r-bruto">R$ 0</dd></div>
+          <div><dt>Taxas</dt><dd id="r-taxa">R$ 0</dd></div>
+          <div><dt>Custos</dt><dd id="r-custo">R$ 0</dd></div>
+        </dl>
+        <div class="recibo-total">
+          <span>Sobra para você</span>
+          <strong id="r-liquido">R$ 0</strong>
+        </div>
+        <p class="recibo-comparacao" id="r-comparacao"></p>
+      </div>
+    </section>
+
+    <!-- TESTE -->
+    <section class="secao" id="teste" aria-labelledby="teste-titulo">
+      <div class="secao-cab">
+        <h2 id="teste-titulo">Qual caminho combina com você?</h2>
+        <p>Quatro perguntas, menos de um minuto. O resultado leva em conta seu tempo, quanto pode investir e o que você gosta de fazer.</p>
+      </div>
+      <div class="quiz" id="quiz">
+        <ol class="quiz-passos" id="quiz-passos" aria-label="Progresso do teste"></ol>
+        <div class="quiz-corpo" id="quiz-corpo"></div>
+      </div>
+    </section>
+
+    <!-- CAMINHOS -->
+    <section class="secao" id="caminhos" aria-labelledby="caminhos-titulo">
+      <div class="secao-cab">
+        <h2 id="caminhos-titulo">12 caminhos para ganhar dinheiro em casa</h2>
+        <p>Valores por hora são faixas para quem está começando. Clique em um caminho para ver o passo a passo e simular a renda.</p>
+      </div>
+      <div class="filtros" role="search">
+        <div class="chips" id="filtro-cat" role="radiogroup" aria-label="Filtrar por tipo"></div>
+        <div class="filtros-linha">
+          <div class="campo">
+            <label for="filtro-busca">Buscar</label>
+            <input id="filtro-busca" type="search" placeholder="Ex.: Canva, aulas, bolo">
+          </div>
+          <div class="campo">
+            <label for="filtro-invest">Investimento inicial</label>
+            <select id="filtro-invest">
+              <option value="2">Qualquer</option>
+              <option value="0">Nenhum</option>
+              <option value="1">Até baixo</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label for="filtro-ordem">Ordenar por</label>
+            <select id="filtro-ordem">
+              <option value="rapido">Primeira renda mais rápida</option>
+              <option value="hora">Maior valor por hora</option>
+              <option value="invest">Menor investimento</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <p class="contagem" id="caminhos-contagem" aria-live="polite"></p>
+      <ul class="grade-caminhos" id="lista-caminhos"></ul>
+    </section>
+
+    <!-- GOLPES -->
+    <section class="secao secao-golpes" id="golpes" aria-labelledby="golpes-titulo">
+      <div class="golpes-in">
+        <div>
+          <h2 id="golpes-titulo">Recebeu uma proposta? Confira antes de pagar qualquer coisa.</h2>
+          <p>Marque o que aparece na oferta. Golpes de “trabalho em casa” quase sempre pedem dinheiro primeiro e prometem ganho garantido.</p>
+          <ul class="sinais" id="sinais"></ul>
+        </div>
+        <div class="medidor" aria-live="polite">
+          <svg viewBox="0 0 200 120" class="medidor-arco" aria-hidden="true">
+            <path d="M20 110 A80 80 0 0 1 180 110" fill="none" stroke="var(--borda)" stroke-width="18" stroke-linecap="round"/>
+            <path id="medidor-valor" d="M20 110 A80 80 0 0 1 180 110" fill="none" stroke="var(--verde)" stroke-width="18" stroke-linecap="round" pathLength="100" stroke-dasharray="0 100"/>
+          </svg>
+          <p class="medidor-rotulo" id="medidor-rotulo">Nenhum sinal marcado</p>
+          <p class="medidor-texto" id="medidor-texto">Marque os itens ao lado conforme a proposta que você recebeu.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- PLANO -->
+    <section class="secao" id="plano" aria-labelledby="plano-titulo">
+      <div class="secao-cab">
+        <h2 id="plano-titulo">Seu plano para os primeiros 30 dias</h2>
+        <p>Vale para qualquer caminho. Marque as etapas conforme for cumprindo: seu progresso fica salvo neste navegador.</p>
+      </div>
+      <ol class="semanas" id="semanas"></ol>
+    </section>
+
+    <!-- FORMULÁRIO -->
+    <section class="secao secao-form" id="contato" aria-labelledby="form-titulo">
+      <div class="form-in">
+        <div class="form-texto">
+          <h2 id="form-titulo">Receba o plano personalizado</h2>
+          <p>Deixe seu contato e enviamos o passo a passo do caminho escolhido, com modelo de proposta e tabela de preços para começar.</p>
+          <ul class="beneficios">
+            <li>Modelo de mensagem para seus primeiros clientes</li>
+            <li>Planilha para calcular preço sem ter prejuízo</li>
+            <li>Lista de plataformas confiáveis por área</li>
+          </ul>
+        </div>
+        <form class="form" id="form-lead" novalidate>
+          <div class="campo">
+            <label for="f-nome">Nome</label>
+            <input id="f-nome" name="nome" autocomplete="name" required>
+          </div>
+          <div class="campo">
+            <label for="f-email">E-mail</label>
+            <input id="f-email" name="email" type="email" autocomplete="email" inputmode="email">
+          </div>
+          <div class="campo">
+            <label for="f-tel">WhatsApp</label>
+            <input id="f-tel" name="telefone" type="tel" autocomplete="tel" inputmode="tel" placeholder="(11) 91234-5678">
+            <span class="dica">Preencha e-mail, WhatsApp ou os dois.</span>
+          </div>
+          <div class="campo">
+            <label for="f-interesse">Caminho que mais interessa</label>
+            <select id="f-interesse" name="interesse"></select>
+          </div>
+          <div class="campo">
+            <label for="f-horas">Tempo disponível por semana</label>
+            <select id="f-horas" name="horasSemana">
+              <option value="5">Até 5 horas</option>
+              <option value="15" selected>De 5 a 15 horas</option>
+              <option value="30">Mais de 15 horas</option>
+            </select>
+          </div>
+          <label class="consentimento">
+            <input type="checkbox" name="consentimento" id="f-consent">
+            <span>Autorizo o contato por e-mail ou WhatsApp sobre o plano. Posso pedir a exclusão dos meus dados a qualquer momento (LGPD).</span>
+          </label>
+          <div class="form-erros" id="form-erros" role="alert"></div>
+          <button class="btn btn-primario" type="submit">Receber meu plano</button>
+        </form>
+        <div class="form-ok" id="form-ok" hidden tabindex="-1">
+          <h3>Pronto, <span id="ok-nome"></span>!</h3>
+          <p id="ok-texto">Seu pedido foi registrado. Enquanto isso, comece pela primeira semana do plano.</p>
+          <button class="btn btn-secundario" type="button" id="ok-novo">Enviar outro contato</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="secao" id="duvidas" aria-labelledby="faq-titulo">
+      <div class="secao-cab"><h2 id="faq-titulo">Perguntas frequentes</h2></div>
+      <div class="faq">
+        <details>
+          <summary>Preciso abrir empresa para começar?</summary>
+          <p>Não para testar. Quando a renda ficar constante, o MEI é o caminho mais simples: custa uma taxa mensal fixa, permite emitir nota fiscal e dá direito a benefícios do INSS. Confira as atividades permitidas no Portal do Empreendedor (gov.br).</p>
+        </details>
+        <details>
+          <summary>Quanto tempo leva para ganhar o primeiro dinheiro?</summary>
+          <p>Serviços que você já sabe fazer, como aulas, costura ou doces, podem render na primeira semana. Caminhos que exigem portfólio ou audiência, como programação e criação de conteúdo, levam meses.</p>
+        </details>
+        <details>
+          <summary>Como sei quanto cobrar?</summary>
+          <p>Some quanto você quer ganhar por mês com seus custos fixos e divida pelas horas que vai trabalhar de fato. Use a calculadora no topo da página e compare com as faixas de cada caminho.</p>
+        </details>
+        <details>
+          <summary>Vocês vendem curso ou pedem pagamento?</summary>
+          <p>Não. O plano e os modelos são gratuitos. Se alguém pedir pagamento em nosso nome para liberar uma “vaga de trabalho”, é golpe.</p>
+        </details>
+      </div>
+    </section>
+  </main>
+
+  <footer class="rodape">
+    <div class="rodape-in">
+      <p><strong>Renda em Casa</strong>. Informação para começar com o pé no chão. Os valores são estimativas e variam com sua região, experiência e dedicação.</p>
+      <p class="rodape-links"><a href="crm.html">Área do CRM</a><a href="#duvidas">Perguntas frequentes</a><a href="#golpes">Como evitar golpes</a></p>
+    </div>
+  </footer>
+
+  <dialog class="modal" id="modal-caminho" aria-labelledby="modal-titulo">
+    <div class="modal-in" id="modal-conteudo"></div>
+  </dialog>
+
+  <div class="toast-area" id="toasts" aria-live="polite"></div>
+
+  <script type="module" src="js/site.js"></script>
+</body>
+</html>

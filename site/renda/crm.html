@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CRM Renda em Casa</title>
+  <meta name="description" content="Painel para acompanhar os contatos que pediram o plano: funil, tarefas, notas e relatórios.">
+  <meta name="robots" content="noindex">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&display=swap">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/crm.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23f4b63f'/%3E%3Cpath d='M9 17l7-7 7 7v7H9z' fill='%2313233a'/%3E%3C/svg%3E">
+</head>
+<body>
+  <div class="app">
+    <aside class="lateral">
+      <a class="marca" href="index.html" title="Voltar ao site">
+        <svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="var(--moeda)"/><path d="M9 17l7-7 7 7v7H9z" fill="var(--tinta)"/><rect x="14" y="19" width="4" height="5" fill="var(--moeda)"/></svg>
+        <span>Renda em Casa <small>CRM</small></span>
+      </a>
+      <nav class="abas" aria-label="Seções do CRM">
+        <a href="#painel" data-aba="painel">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h6V4H4zm0 7h6v-5H4zm10 0h6v-9h-6zm0-16v5h6V4z"/></svg>Painel</a>
+        <a href="#leads" data-aba="leads">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 11a4 4 0 1 0-4-4 4 4 0 0 0 4 4zm-8 1a3 3 0 1 0-3-3 3 3 0 0 0 3 3zm8 2c-2.7 0-8 1.3-8 4v2h16v-2c0-2.7-5.3-4-8-4zm-8 0c-.3 0-.7 0-1.1.1A4.9 4.9 0 0 1 8 18v2H2v-2c0-2 3.9-4 6-4z"/></svg>Contatos <span class="contador" id="cont-leads">0</span></a>
+        <a href="#funil" data-aba="funil">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18l-7 8v6l-4 2v-8z"/></svg>Funil</a>
+        <a href="#tarefas" data-aba="tarefas">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>Tarefas <span class="contador" id="cont-tarefas">0</span></a>
+        <a href="#ajustes" data-aba="ajustes">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3h-4l-.4 2.7a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1L11 21h4l.4-2.7a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 3.5-3.5 3.5 3.5 0 0 1-3.5 3.5z"/></svg>Dados</a>
+      </nav>
+      <div class="lateral-pe">
+        <button class="tema-btn" type="button" aria-label="Alternar tema claro e escuro" title="Alternar tema">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z"/></svg>
+        </button>
+        <a href="index.html" class="voltar-site">Ver o site</a>
+      </div>
+    </aside>
+
+    <main class="principal" id="principal">
+      <header class="principal-cab">
+        <h1 id="titulo-aba">Painel</h1>
+        <div class="cab-acoes">
+          <button class="btn btn-primario" type="button" id="btn-novo">Novo contato</button>
+        </div>
+      </header>
+
+      <!-- PAINEL -->
+      <section class="aba" id="aba-painel" aria-labelledby="titulo-aba">
+        <div id="painel-vazio"></div>
+        <div class="kpis" id="kpis"></div>
+        <div class="paineis" id="painel-graficos">
+          <article class="painel painel-largo">
+            <h2>Novos contatos nos últimos 14 dias</h2>
+            <div id="grafico-serie" class="grafico"></div>
+          </article>
+          <article class="painel">
+            <h2>Funil de conversão</h2>
+            <div id="grafico-funil"></div>
+          </article>
+          <article class="painel">
+            <h2>De onde vêm os contatos</h2>
+            <div id="grafico-origem"></div>
+          </article>
+          <article class="painel">
+            <h2>Caminhos mais procurados</h2>
+            <div id="grafico-interesse"></div>
+          </article>
+          <article class="painel">
+            <h2>Próximas tarefas</h2>
+            <ul class="mini-tarefas" id="mini-tarefas"></ul>
+          </article>
+        </div>
+      </section>
+
+      <!-- LEADS -->
+      <section class="aba" id="aba-leads" hidden>
+        <div class="barra-filtros">
+          <div class="campo campo-busca">
+            <label for="busca" class="sr-only">Buscar contatos</label>
+            <input id="busca" type="search" placeholder="Buscar por nome, e-mail, telefone ou tag">
+          </div>
+          <div class="campo">
+            <label for="f-etapa" class="sr-only">Etapa</label>
+            <select id="f-etapa"></select>
+          </div>
+          <div class="campo">
+            <label for="f-origem" class="sr-only">Origem</label>
+            <select id="f-origem"></select>
+          </div>
+          <div class="campo">
+            <label for="f-ordem" class="sr-only">Ordenar</label>
+            <select id="f-ordem">
+              <option value="recentes">Mais recentes</option>
+              <option value="antigos">Mais antigos</option>
+              <option value="pontuacao">Maior pontuação</option>
+              <option value="valor">Maior valor</option>
+              <option value="nome">Nome (A–Z)</option>
+            </select>
+          </div>
+        </div>
+        <div class="selecao" id="barra-selecao" hidden>
+          <span id="sel-contagem"></span>
+          <label for="sel-etapa" class="sr-only">Mover selecionados para</label>
+          <select id="sel-etapa"></select>
+          <button type="button" class="btn btn-secundario btn-pequeno" id="sel-mover">Mover</button>
+          <button type="button" class="btn btn-perigo btn-pequeno" id="sel-excluir">Excluir</button>
+        </div>
+        <div class="tabela-wrap">
+          <table class="tabela">
+            <thead>
+              <tr>
+                <th scope="col" class="col-check"><input type="checkbox" id="sel-todos" aria-label="Selecionar todos"></th>
+                <th scope="col">Contato</th>
+                <th scope="col">Etapa</th>
+                <th scope="col" class="col-esconde">Interesse</th>
+                <th scope="col" class="col-esconde">Origem</th>
+                <th scope="col">Pontuação</th>
+                <th scope="col" class="col-num">Valor</th>
+                <th scope="col" class="col-esconde">Entrada</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-leads"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- FUNIL -->
+      <section class="aba" id="aba-funil" hidden>
+        <p class="ajuda">Arraste os cartões entre as colunas, ou use o seletor de etapa dentro de cada cartão.</p>
+        <div class="kanban" id="kanban"></div>
+      </section>
+
+      <!-- TAREFAS -->
+      <section class="aba" id="aba-tarefas" hidden>
+        <form class="nova-tarefa" id="form-tarefa">
+          <div class="campo">
+            <label for="t-titulo">Nova tarefa</label>
+            <input id="t-titulo" placeholder="Ex.: Enviar proposta para Ana">
+          </div>
+          <div class="campo">
+            <label for="t-lead">Contato</label>
+            <select id="t-lead"></select>
+          </div>
+          <div class="campo">
+            <label for="t-data">Prazo</label>
+            <input id="t-data" type="date">
+          </div>
+          <button class="btn btn-primario" type="submit">Adicionar tarefa</button>
+        </form>
+        <div class="chips" id="t-filtro" role="radiogroup" aria-label="Filtrar tarefas">
+          <button type="button" class="chip" role="radio" data-f="abertas" aria-checked="true">Abertas</button>
+          <button type="button" class="chip" role="radio" data-f="atrasadas" aria-checked="false">Atrasadas</button>
+          <button type="button" class="chip" role="radio" data-f="feitas" aria-checked="false">Concluídas</button>
+          <button type="button" class="chip" role="radio" data-f="todas" aria-checked="false">Todas</button>
+        </div>
+        <ul class="lista-tarefas" id="lista-tarefas"></ul>
+      </section>
+
+      <!-- AJUSTES -->
+      <section class="aba" id="aba-ajustes" hidden>
+        <div class="paineis">
+          <article class="painel">
+            <h2>Exportar</h2>
+            <p>Baixe seus contatos para abrir no Excel, Google Planilhas ou outro CRM.</p>
+            <div class="linha-btns">
+              <button class="btn btn-secundario" type="button" id="exp-csv">Baixar planilha (CSV)</button>
+              <button class="btn btn-secundario" type="button" id="exp-json">Baixar backup completo</button>
+            </div>
+          </article>
+          <article class="painel">
+            <h2>Importar</h2>
+            <p>Aceita CSV com as colunas nome, email, telefone, origem, etapa, interesse, valor, tags; ou um backup completo.</p>
+            <label class="btn btn-secundario" for="imp-arquivo">Escolher arquivo</label>
+            <input type="file" id="imp-arquivo" accept=".csv,.json,text/csv,application/json" class="sr-only">
+          </article>
+          <article class="painel">
+            <h2>Dados de demonstração</h2>
+            <p>Carregue 20 contatos fictícios para conhecer o CRM. Seus dados atuais serão substituídos.</p>
+            <button class="btn btn-secundario" type="button" id="btn-demo">Carregar demonstração</button>
+          </article>
+          <article class="painel painel-perigo">
+            <h2>Apagar tudo</h2>
+            <p>Remove todos os contatos e tarefas deste navegador. Baixe um backup antes.</p>
+            <button class="btn btn-perigo" type="button" id="btn-limpar">Apagar todos os dados</button>
+          </article>
+          <article class="painel painel-largo">
+            <h2>Onde ficam os dados</h2>
+            <p>Os contatos ficam salvos neste navegador e o site e o CRM conversam entre si quando abertos no mesmo navegador. Para uma equipe usar ao mesmo tempo, conecte um banco de dados ou serviço como Google Planilhas, Supabase ou Firebase, e respeite a LGPD: guarde só o necessário e atenda pedidos de exclusão.</p>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Gaveta de detalhes do contato -->
+  <dialog class="gaveta" id="gaveta" aria-labelledby="g-nome">
+    <div class="gaveta-in" id="gaveta-in"></div>
+  </dialog>
+
+  <!-- Novo contato -->
+  <dialog class="modal" id="modal-novo" aria-labelledby="novo-titulo">
+    <form class="modal-in form-novo" id="form-novo" method="dialog" novalidate>
+      <div class="modal-cab">
+        <h2 id="novo-titulo">Novo contato</h2>
+        <button type="button" class="fechar" data-fechar aria-label="Fechar">×</button>
+      </div>
+      <div class="grade-2">
+        <div class="campo"><label for="n-nome">Nome</label><input id="n-nome" name="nome" required></div>
+        <div class="campo"><label for="n-email">E-mail</label><input id="n-email" name="email" type="email"></div>
+        <div class="campo"><label for="n-tel">WhatsApp</label><input id="n-tel" name="telefone" type="tel"></div>
+        <div class="campo"><label for="n-origem">Origem</label><select id="n-origem" name="origem"></select></div>
+        <div class="campo"><label for="n-interesse">Interesse</label><select id="n-interesse" name="interesse"></select></div>
+        <div class="campo"><label for="n-valor">Valor estimado (R$)</label><input id="n-valor" name="valor" type="number" min="0" step="1" inputmode="numeric"></div>
+        <div class="campo"><label for="n-etapa">Etapa</label><select id="n-etapa" name="etapa"></select></div>
+        <div class="campo"><label for="n-tags">Tags</label><input id="n-tags" name="tags" placeholder="separe por vírgula"></div>
+      </div>
+      <div class="form-erros" id="novo-erros" role="alert"></div>
+      <div class="linha-btns">
+        <button class="btn btn-primario" type="submit" value="salvar">Salvar contato</button>
+        <button class="btn btn-secundario" type="button" data-fechar>Cancelar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toast-area" id="toasts" aria-live="polite"></div>
+  <script type="module" src="js/crm.js"></script>
+</body>
+</html>
