@@ -130,6 +130,45 @@ test('terminar a última fase mostra o final', async () => {
   assert.deepEqual(errors, []);
 });
 
+test('celular deitado: botão de pausa responde ao toque', async () => {
+  const { page, context } = await open({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true }, '?fase=1-1');
+  await page.waitForFunction(() => window.__faisca.game && window.__faisca.game.state === 'play');
+  const r = await page.evaluate(() => { const b = document.getElementById('btn-pause').getBoundingClientRect(); return { x: b.left + b.width / 2, y: b.top + b.height / 2 }; });
+  await page.touchscreen.tap(r.x, r.y);
+  await page.waitForFunction(() => window.__faisca.mode === 'pause');
+  await context.close();
+  assert.deepEqual(errors, []);
+});
+
+test('Modo Fuga: corre, perde as 3 vidas e mostra a distância', async () => {
+  const { page, context } = await open();
+  await page.evaluate(() => localStorage.setItem('faisca.save.v1', JSON.stringify({ levels: { '1-1': { done: true, gems: [false, false, false], bestTime: 3000 } } })));
+  await page.reload();
+  await page.waitForFunction(() => window.__faisca && window.__faisca.mode === 'title');
+  await page.click('#t-run');
+  await page.waitForFunction(() => window.__faisca.game && window.__faisca.game.isRun && window.__faisca.game.state === 'play');
+  await page.keyboard.down('ArrowRight');
+  await page.waitForTimeout(1500);
+  await page.keyboard.up('ArrowRight');
+  for (let i = 0; i < 3; i++) {
+    await page.waitForFunction(() => window.__faisca.game.state === 'play' || window.__faisca.mode === 'complete');
+    await page.evaluate(() => window.__faisca.game.die('dark'));
+    await page.waitForTimeout(1300);
+  }
+  await page.waitForSelector('#scr-complete:not([hidden])', { timeout: 6000 });
+  assert.match(await page.textContent('#r-title'), /escuridão/);
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('faisca.save.v1')));
+  assert.equal(saved.run.runs, 1);
+  assert.ok(saved.run.best > 0, 'gravou a distância');
+  await shot(page, 'fuga-fim');
+  await page.click('#r-map');
+  await page.click('#t-ach');
+  await page.waitForSelector('#scr-ach:not([hidden])');
+  assert.ok(await page.locator('.ach.on').count() >= 1);
+  await context.close();
+  assert.deepEqual(errors, []);
+});
+
 test('todas as fases carregam e rodam alguns segundos sem erro', async () => {
   const { page, context } = await open();
   const ids = await page.evaluate(() => window.__faisca.LEVELS.map((l) => l.id));

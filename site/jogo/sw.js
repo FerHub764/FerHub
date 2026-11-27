@@ -1,5 +1,5 @@
 // Guarda o jogo no aparelho para jogar sem internet depois da primeira visita.
-const CACHE = 'faisca-v1';
+const CACHE = 'faisca-v2';
 const CORE = [
   './',
   './index.html',
@@ -7,8 +7,10 @@ const CORE = [
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/apple-touch-icon.png',
+  './js/achievements.js',
   './js/audio.js',
   './js/config.js',
+  './js/endless.js',
   './js/game.js',
   './js/input.js',
   './js/level.js',

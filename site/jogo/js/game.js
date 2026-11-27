@@ -125,13 +125,23 @@ export class Game {
 
   // ---------- quadro ----------
   update(input) {
-    const inp = this.state === 'play' && !this.demo ? input : NO_INPUT;
+    let inp = this.state === 'play' && !this.demo ? input : NO_INPUT;
     this.heldJump = inp.jump;
     this.frame++;
     if (this.flash > 0) this.flash--;
     if (this.shake > 0) this.shake = Math.max(0, this.shake - 0.6);
     this.updateParticles();
-    if (this.freeze > 0) { this.freeze--; return; }
+    if (this.freeze > 0) {
+      // toque durante o congelamento do impacto fica guardado para o próximo quadro
+      if (inp.jumpPressed) this.pendJump = true;
+      if (inp.dashPressed) this.pendDash = true;
+      this.freeze--;
+      return;
+    }
+    if (this.pendJump || this.pendDash) {
+      if (this.state === 'play') inp = { ...inp, jumpPressed: inp.jumpPressed || !!this.pendJump, dashPressed: inp.dashPressed || !!this.pendDash };
+      this.pendJump = this.pendDash = false;
+    }
 
     if (this.state === 'play' && !this.demo) this.time++;
     this.stateT++;
@@ -200,6 +210,14 @@ export class Game {
     if (p.dashing > 0) this.lastDashFrame = this.frame;
 
     for (const ev of p.events) this.onPlayerEvent(ev, p);
+    // recarga do dash no ar (inimigo, orbe, parede): faísca acende de novo
+    if (p.dashAvail && this.prevDashAvail === false && !p.onGround) {
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2;
+        this.particles.push({ x: p.x + 5, y: p.y + 6, vx: Math.cos(a) * 1.2, vy: Math.sin(a) * 1.2, life: 12, max: 12, color: '#fff2c2', size: 1, grav: 0, glow: true });
+      }
+    }
+    this.prevDashAvail = p.dashAvail;
     if (wasDash && p.dashing === 0) this.squash.x = 1;
 
     // rastro
@@ -461,7 +479,7 @@ export class Game {
       const c = W.tileAt(Math.floor(s.x / T), Math.floor(s.y / T));
       let gone = s.life <= 0 || isSolidCode(c);
       if (!gone && this.state === 'play' && overlap(p, s.x - 3, s.y - 3, 6, 6)) {
-        if (p.dashing > 0) { gone = true; this.sfx('pop'); this.brasas += 1; this.popups.push({ x: s.x, y: s.y - 6, text: '+1', color: '#bff4ff', life: 30 }); }
+        if (p.dashing > 0) { gone = true; this.sfx('pop'); this.brasas += 1; this.popups.push({ x: s.x, y: s.y - 6, text: '+1', color: '#bff4ff', life: 30 }); this.emit('pop'); this.emit('hud'); }
         else { this.die('water'); }
       }
       if (gone) {
@@ -677,7 +695,8 @@ export class Game {
     const p = this.player;
     if (this.playerVisible) {
       const fl = Math.sin(t * 0.21) * 2.5 + Math.sin(t * 0.53) * 1.5;
-      out.push({ x: p.x + 5, y: p.y + 4, r: 84 + fl + (p.dashing > 0 ? 16 : 0), i: 1, c: this.skinLight, glow: 0.26 });
+      const r = (84 + fl + (p.dashing > 0 ? 16 : 0)) * (p.dashAvail ? 1 : 0.82);
+      out.push({ x: p.x + 5, y: p.y + 4, r, i: 1, c: this.skinLight, glow: p.dashAvail ? 0.26 : 0.16 });
     } else if (this.deathAt && this.state === 'dead') {
       out.push({ x: this.deathAt.x, y: this.deathAt.y, r: Math.max(0, 80 - this.stateT * 2.2), i: 1, c: this.skinLight, glow: 0.3 });
     }

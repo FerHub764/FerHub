@@ -8,8 +8,10 @@ export function defaultSave() {
     wallet: 0,
     owned: ['classica'],
     skin: 'classica',
-    settings: { music: true, sfx: true, vibrate: true, brightness: 1, timer: true, buttons: 'm' },
-    stats: { deaths: 0, kills: 0, playFrames: 0 },
+    settings: { music: true, sfx: true, vibrate: true, brightness: 1, timer: true, buttons: 'm', lefty: false, shake: true },
+    stats: { deaths: 0, kills: 0, playFrames: 0, bestCombo: 0, earned: 0, pops: 0, flawless: false, allCoins: false },
+    run: { best: 0, runs: 0, escaped: false },
+    ach: {},
     ending: false,
   };
 }
@@ -20,7 +22,15 @@ export function loadSave() {
     const raw = localStorage.getItem(KEY);
     if (!raw) return base;
     const s = JSON.parse(raw);
-    return { ...base, ...s, settings: { ...base.settings, ...(s.settings || {}) }, stats: { ...base.stats, ...(s.stats || {}) } };
+    return {
+      ...base, ...s,
+      settings: { ...base.settings, ...(s.settings || {}) },
+      stats: { ...base.stats, ...(s.stats || {}) },
+      run: { ...base.run, ...(s.run || {}) },
+      ach: { ...(s.ach || {}) },
+      levels: { ...(s.levels || {}) },
+      owned: Array.isArray(s.owned) && s.owned.length ? s.owned : base.owned,
+    };
   } catch {
     return base;
   }
@@ -61,11 +71,31 @@ export function recordCompletion(save, st) {
   rec.bestCombo = Math.max(rec.bestCombo || 0, st.bestCombo);
   save.levels[st.id] = rec;
   save.wallet += st.brasas;
+  save.stats.earned += st.brasas;
   save.stats.deaths += st.deaths;
   save.stats.kills += st.kills;
   save.stats.playFrames += st.time;
+  save.stats.bestCombo = Math.max(save.stats.bestCombo, st.bestCombo);
+  if (st.deaths === 0) save.stats.flawless = true;
+  if (st.coinsTotal > 0 && st.coins >= st.coinsTotal) save.stats.allCoins = true;
   writeSave(save);
   return result;
+}
+
+// Fim de uma corrida no Modo Fuga.
+export function recordRun(save, st) {
+  const newRecord = st.distance > save.run.best;
+  save.run.best = Math.max(save.run.best, st.distance);
+  save.run.runs += 1;
+  if (st.escaped) save.run.escaped = true;
+  save.wallet += st.brasas;
+  save.stats.earned += st.brasas;
+  save.stats.kills += st.kills;
+  save.stats.deaths += st.deaths;
+  save.stats.playFrames += st.time;
+  save.stats.bestCombo = Math.max(save.stats.bestCombo, st.bestCombo);
+  writeSave(save);
+  return { newRecord };
 }
 
 export function fmtTime(frames) {

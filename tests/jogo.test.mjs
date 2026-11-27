@@ -7,6 +7,9 @@ import { parseLevel, makeWorld } from '../site/jogo/js/level.js';
 import { LEVELS, WORLDS } from '../site/jogo/js/levels/index.js';
 import { recordCompletion, defaultSave, fmtTime } from '../site/jogo/js/save.js';
 import { solveLevel } from '../tools/jogo/solver.mjs';
+import { CHUNKS, START_CHUNK, EXIT_CHUNK, LANTERN_CHUNK, makeRun, RunGame } from '../site/jogo/js/endless.js';
+import { ACHIEVEMENTS, checkAchievements } from '../site/jogo/js/achievements.js';
+import { recordRun } from '../site/jogo/js/save.js';
 
 const flat = { id: 't', map: ['#.......#', '#.......#', '#.......#', '#.......#', '#.......#', '#P......E', '#########'] };
 const inp = (o = {}) => ({ left: false, right: false, jump: false, jumpPressed: false, dashPressed: false, ...o });
@@ -81,3 +84,50 @@ for (const def of LEVELS) {
     assert.deepEqual(missing, []);
   });
 }
+
+test('Modo Fuga: corridas encaixam, têm lanternas e a mesma semente gera a mesma corrida', () => {
+  const a = makeRun(123), b = makeRun(123), c = makeRun(124);
+  assert.deepEqual(a.map, b.map);
+  assert.notDeepEqual(a.map, c.map);
+  assert.equal(a.map.length, 18);
+  assert.ok(a.map.every((r) => r.length === a.map[0].length));
+  const p = parseLevel(a);
+  assert.ok(p.ents.filter((e) => e.type === 'C').length >= 10);
+  assert.equal(p.ents.filter((e) => e.type === 'E').length, 1);
+  assert.deepEqual(a.run.chunks.slice(1, 6).map((id) => CHUNKS.find((k) => k.id === id).tier), [1, 1, 1, 1, 1]);
+});
+
+test('Modo Fuga: a escuridão alcança quem fica parado e as 3 vidas acabam', () => {
+  const g = new RunGame(makeRun(7), {});
+  const idle = inp();
+  let over = null;
+  g.hooks.runover = (st) => { over = st; };
+  for (let i = 0; i < 6000 && !over; i++) g.update(idle);
+  assert.ok(over, 'corrida terminou');
+  assert.equal(g.lives, 0);
+  assert.equal(over.run, true);
+});
+
+for (const c of CHUNKS) {
+  test(`trecho "${c.id}" do Modo Fuga é atravessável`, () => {
+    const F = '################';
+    const list = [START_CHUNK, c, EXIT_CHUNK];
+    const map = [];
+    for (let y = 0; y < 18; y++) map.push(list.map((k) => (y < 2 ? F : k.rows[y - 2])).join(''));
+    const r = solveLevel({ id: c.id, name: c.id, map, hints: [] });
+    assert.ok(r.goals.every((gl) => gl.hit), `saída alcançável depois de ${c.id}`);
+    assert.equal(c.rows.length, 16);
+    assert.ok(c.rows.every((row) => row.length === 16));
+  });
+}
+
+test('troféus: corrida de 300 m e combo liberam os certos', () => {
+  const s = defaultSave();
+  assert.deepEqual(checkAchievements(s), []);
+  recordRun(s, { distance: 320, brasas: 40, kills: 3, deaths: 3, time: 600, bestCombo: 3, escaped: false });
+  const ids = checkAchievements(s).map((a) => a.id);
+  assert.ok(ids.includes('fuga300') && ids.includes('combo3'));
+  assert.ok(!ids.includes('fuga1000'));
+  assert.deepEqual(checkAchievements(s), [], 'não repete');
+  assert.equal(new Set(ACHIEVEMENTS.map((a) => a.id)).size, ACHIEVEMENTS.length);
+});

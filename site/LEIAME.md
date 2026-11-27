@@ -31,9 +31,11 @@ Cada trilha é um arquivo em `site/js/tracks/`. Use os helpers de `_dsl.js` (`mo
 
 Jogo de plataforma 2D para celular, publicado junto com o site em `/jogo/`. Você controla uma brasa viva que atravessa cavernas escuras: a luz vem dela e dos objetos acesos. Tem 12 fases em 3 mundos (Grutas de Âmbar, Minas de Cristal, Poço das Marés), dash que derruba inimigos e encadeia combos, pulo na parede, 3 gemas escondidas por fase, loja de chamas (skins) e música e efeitos sintetizados no navegador.
 
-- **Controles no celular:** em pé vira um console portátil (tela em cima, botões embaixo); deitado, os botões ficam por cima da tela. Teclado: ← → andam, Espaço pula, X dá dash, Esc pausa. Controles de videogame também funcionam.
+- **Modo Fuga da Escuridão:** corrida infinita montada com trechos sorteados (`site/jogo/js/endless.js`). A escuridão avança pela esquerda e acelera; você tem 3 vidas (+1 a cada 500 m) e o recorde fica marcado com uma bandeira. Libera depois da fase 1-1.
+- **Troféus:** 18 conquistas e estatísticas em `site/jogo/js/achievements.js`.
+- **Controles no celular:** em pé vira um console portátil (tela em cima, botões embaixo, pílula de pausa); deitado, os botões ficam por cima da tela. O anel do botão de dash e a própria Faísca apagam quando o dash foi gasto no ar. Há opção para canhotos e para desligar tremor e clarões. Teclado: ← → andam, Espaço pula, X dá dash, Esc pausa. Controles de videogame também funcionam.
 - **Instalar:** no celular, abra `/jogo/` e use "Adicionar à tela inicial". Depois da primeira visita ele funciona sem internet.
 - **Fases:** cada fase é um mapa em texto em `site/jogo/js/levels/` (legenda no topo de `site/jogo/js/level.js`).
-- **Verificador:** `npm run jogo:verificar` procura, com a física real do jogo, um caminho até a saída e até cada gema de todas as fases. Rode depois de editar um mapa. `node tools/jogo/solver.mjs 2-3 --mapa` mostra onde a busca chegou.
+- **Verificador:** `npm run jogo:verificar` procura, com a física real do jogo, um caminho até a saída e até cada gema de todas as fases. Os testes também passam cada trecho do Modo Fuga pelo verificador. Rode depois de editar um mapa. `node tools/jogo/solver.mjs 2-3 --mapa` mostra onde a busca chegou.
 - **Testes:** `node --test tests/jogo.test.mjs` (física, progresso e fases) e `node --test tests/e2e/jogo.e2e.mjs` (navegador).
 - **Página única:** `npm run jogo:pagina` gera `faisca.html` com o jogo inteiro embutido num só arquivo.

@@ -57,51 +57,68 @@ function solidish(c) { return c === TL.SOLID || c === TL.CRUMBLE; }
 
 // Margem de rocha desenhada acima e abaixo da fase, para telas mais altas que o mapa.
 export const PAD_ROWS = 12;
+const SEG = 32;
 
-export function prerenderTiles(parsed, theme) {
+// Desenha as colunas [c0, c1) da fase num canvas próprio. Fases longas (Modo Fuga)
+// são desenhadas aos pedaços; cada pedaço pode ter a paleta do seu trecho.
+export function prerenderTiles(parsed, theme, c0 = 0, c1 = parsed.w) {
   const { w, h } = parsed;
   const PR = PAD_ROWS;
   const H0 = h + PR * 2;
+  const M = 4;
+  const sx0 = Math.max(0, c0 - M), sx1 = Math.min(w, c1 + M);
+  const lw = sx1 - sx0;
   // grade estendida: linhas extras repetem a primeira/última linha (só rocha)
-  const base = new Uint8Array(w * H0);
-  for (let y = 0; y < H0; y++) for (let x = 0; x < w; x++) {
+  const base = new Uint8Array(lw * H0);
+  for (let y = 0; y < H0; y++) for (let x = 0; x < lw; x++) {
     const sy = Math.min(h - 1, Math.max(0, y - PR));
-    const c = parsed.base[sy * w + x];
-    base[y * w + x] = y - PR === sy ? c : (c === TL.SOLID ? TL.SOLID : TL.EMPTY);
+    const c = parsed.base[sy * w + x + sx0];
+    base[y * lw + x] = y - PR === sy ? c : (c === TL.SOLID ? TL.SOLID : TL.EMPTY);
   }
-  const W = w * T, H = H0 * T;
+  const W = lw * T, H = H0 * T;
   const cv = mk(W, H);
   const g = cv.getContext('2d');
   const R = theme.rock;
-  const at = (x, y) => (x < 0 || x >= w ? TL.SOLID : y < 0 ? TL.SOLID : y >= H0 ? TL.SOLID : base[y * w + x]);
+  const at = (x, y) => {
+    if (y < 0 || y >= H0) return TL.SOLID;
+    if (x < 0 || x >= lw) {
+      const gx = x + sx0;
+      if (gx < 0 || gx >= w) return TL.SOLID;
+      const sy = Math.min(h - 1, Math.max(0, y - PR));
+      const c = parsed.base[sy * w + gx];
+      return y - PR === sy ? c : (c === TL.SOLID ? TL.SOLID : TL.EMPTY);
+    }
+    return base[y * lw + x];
+  };
   const isRock = (x, y) => at(x, y) === TL.SOLID;
 
   // profundidade de cada bloco (distância até o ar) para escurecer o miolo
-  const depth = new Uint8Array(w * H0).fill(9);
+  const depth = new Uint8Array(lw * H0).fill(9);
   const q = [];
-  for (let y = 0; y < H0; y++) for (let x = 0; x < w; x++) {
-    if (!isRock(x, y)) { depth[y * w + x] = 0; q.push(x, y); }
+  for (let y = 0; y < H0; y++) for (let x = 0; x < lw; x++) {
+    if (!isRock(x, y)) { depth[y * lw + x] = 0; q.push(x, y); }
   }
   for (let i = 0; i < q.length; i += 2) {
-    const x = q[i], y = q[i + 1], d = depth[y * w + x];
+    const x = q[i], y = q[i + 1], d = depth[y * lw + x];
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]]) {
       const nx = x + dx, ny = y + dy;
-      if (nx < 0 || ny < 0 || nx >= w || ny >= H0) continue;
-      const k = ny * w + nx;
+      if (nx < 0 || ny < 0 || nx >= lw || ny >= H0) continue;
+      const k = ny * lw + nx;
       if (depth[k] > d + 1) { depth[k] = d + 1; q.push(nx, ny); }
     }
   }
   const shade = [R.base, R.base, mix(R.base, R.deep, 0.55), R.deep];
 
-  for (let ty = 0; ty < H0; ty++) for (let tx = 0; tx < w; tx++) {
-    const c = base[ty * w + tx];
-    const X = tx * T, Y = ty * T;
+  for (let ty = 0; ty < H0; ty++) for (let lx = 0; lx < lw; lx++) {
+    const c = base[ty * lw + lx];
+    const tx = lx + sx0;
+    const X = lx * T, Y = ty * T, GX = tx * T;
     if (c === TL.SOLID) {
-      const d = Math.min(3, depth[ty * w + tx]);
+      const d = Math.min(3, depth[ty * lw + lx]);
       g.fillStyle = shade[d];
       g.fillRect(X, Y, T, T);
       for (let py = 0; py < T; py++) for (let px = 0; px < T; px++) {
-        const n = hash(X + px, Y + py, 1);
+        const n = hash(GX + px, Y + py, 1);
         if (n < 0.07) { g.fillStyle = d >= 2 ? R.deep : R.dark; g.fillRect(X + px, Y + py, 1, 1); }
         else if (n > 0.965 && d < 2) { g.fillStyle = R.light; g.fillRect(X + px, Y + py, 1, 1); }
       }
@@ -110,8 +127,8 @@ export function prerenderTiles(parsed, theme) {
         g.fillStyle = R.light; g.fillRect(X + px, Y + py, 3, 1);
         g.fillStyle = R.dark; g.fillRect(X + px, Y + py + 1, 3, 1); g.fillRect(X + px + 3, Y + py, 1, 1);
       }
-      const up = isRock(tx, ty - 1), dn = isRock(tx, ty + 1);
-      const lf = isRock(tx - 1, ty), rt = isRock(tx + 1, ty);
+      const up = isRock(lx, ty - 1), dn = isRock(lx, ty + 1);
+      const lf = isRock(lx - 1, ty), rt = isRock(lx + 1, ty);
       if (!lf) { g.fillStyle = R.dark; g.fillRect(X, Y, 2, T); g.fillStyle = R.light; g.fillRect(X + 2, Y + 2, 1, T - 4); }
       if (!rt) { g.fillStyle = R.dark; g.fillRect(X + T - 2, Y, 2, T); }
       if (!dn) {
@@ -124,7 +141,7 @@ export function prerenderTiles(parsed, theme) {
       }
       if (!up) {
         for (let px = 0; px < T; px++) {
-          const gd = 2 + Math.floor(hash(X + px, Y, 8) * 2.6);
+          const gd = 2 + Math.floor(hash(GX + px, Y, 8) * 2.6);
           g.fillStyle = R.top; g.fillRect(X + px, Y, 1, gd);
           g.fillStyle = R.topD; g.fillRect(X + px, Y + gd, 1, 1);
         }
@@ -152,7 +169,7 @@ export function prerenderTiles(parsed, theme) {
       g.fillStyle = dk; g.fillRect(X, Y + 4, T, 1);
       if (tx % 2 === 0) g.fillRect(X, Y + 1, 1, 3);
       g.fillStyle = '#d8c6a0'; g.fillRect(X + 3, Y + 2, 1, 1); g.fillRect(X + 12, Y + 2, 1, 1);
-      const L = at(tx - 1, ty), Rr = at(tx + 1, ty);
+      const L = at(lx - 1, ty), Rr = at(lx + 1, ty);
       if (L !== TL.ONEWAY || Rr !== TL.ONEWAY) {
         g.fillStyle = dk;
         const sx = L !== TL.ONEWAY ? X + 2 : X + T - 4;
@@ -163,7 +180,10 @@ export function prerenderTiles(parsed, theme) {
     }
   }
   outlinePass(g, W, H, R.edge);
-  return cv;
+  if (sx0 === c0 && sx1 === c1) return cv;
+  const out = mk((c1 - c0) * T, H);
+  out.getContext('2d').drawImage(cv, -(c0 - sx0) * T, 0);
+  return out;
 }
 
 function drawSpikes(g, X, Y, c, [l, m, d]) {
@@ -286,6 +306,7 @@ export class Renderer {
     this.levelCache = new Map();
     this.parallax = THEMES.map((t, i) => makeParallax(t, i));
     this.brightness = 1;
+    this.shakeOn = true;
     this.motes = [];
   }
 
@@ -317,15 +338,41 @@ export class Renderer {
 
   prepare(game) {
     const key = game.def.id;
-    let tiles = this.levelCache.get(key);
-    if (!tiles) {
-      tiles = prerenderTiles(game.parsed, game.theme);
-      this.levelCache.set(key, tiles);
+    let segs = this.levelCache.get(key);
+    if (!segs) {
+      segs = new Map();
+      this.levelCache.set(key, segs);
       // poucos mapas na memória: celulares têm limite para canvas
-      while (this.levelCache.size > 3) this.levelCache.delete(this.levelCache.keys().next().value);
+      while (this.levelCache.size > 2) this.levelCache.delete(this.levelCache.keys().next().value);
     }
-    this.tiles = tiles;
+    this.segs = segs;
+    this.segGame = game;
     this.motes = [];
+    const n = Math.ceil(game.parsed.w / SEG);
+    if (n <= 12) for (let k = 0; k < n; k++) this.segment(k);
+  }
+
+  segment(k) {
+    let c = this.segs.get(k);
+    if (!c) {
+      const game = this.segGame;
+      const theme = game.themeAt ? game.themeAt(k * SEG) : game.theme;
+      c = prerenderTiles(game.parsed, theme, k * SEG, Math.min(game.parsed.w, (k + 1) * SEG));
+      this.segs.set(k, c);
+      if (this.segs.size > 14) {
+        for (const key of this.segs.keys()) { if (Math.abs(key - k) > 3) { this.segs.delete(key); break; } }
+      }
+    }
+    return c;
+  }
+
+  drawTiles(cx) {
+    const n = Math.ceil(this.segGame.parsed.w / SEG);
+    const k0 = Math.max(0, Math.floor(cx / (SEG * T))), k1 = Math.min(n - 1, Math.floor((cx + this.vw) / (SEG * T)));
+    for (let k = k0; k <= k1; k++) this.g.drawImage(this.segment(k), k * SEG * T, -PAD_ROWS * T);
+    // desenha com antecedência o próximo pedaço, um por quadro
+    if (k1 + 1 < n && !this.segs.has(k1 + 1)) this.segment(k1 + 1);
+    else if (k0 - 1 >= 0 && !this.segs.has(k0 - 1)) this.segment(k0 - 1);
   }
 
   // ---------- quadro ----------
@@ -334,7 +381,7 @@ export class Renderer {
     const th = game.theme;
     const cam = game.cam;
     let sx = 0, sy = 0;
-    if (game.shake > 0) { sx = Math.round((Math.random() - 0.5) * game.shake); sy = Math.round((Math.random() - 0.5) * game.shake); }
+    if (game.shake > 0 && this.shakeOn) { sx = Math.round((Math.random() - 0.5) * game.shake); sy = Math.round((Math.random() - 0.5) * game.shake); }
     const cx = Math.round(cam.x) + sx, cy = Math.round(cam.y) + sy;
     const t = game.frame;
 
@@ -371,13 +418,14 @@ export class Renderer {
       this.spr(sp.brazier[e.lit ? 1 : 0], e.x + 8 - 17, e.y + T - 26);
     }
 
-    g.drawImage(this.tiles, 0, -PAD_ROWS * T);
+    this.drawTiles(cx);
 
     for (const c of game.crumbles) {
       if (c.state === 'gone' || !vis(c.x, c.y)) continue;
       const shx = c.state === 'shake' ? Math.round(Math.sin(t * 2.3) * 1) : 0;
       this.drawCrumble(c.x + shx, c.y, th, c.state === 'shake');
     }
+    if (game.recordX && vis(game.recordX, cy + vh / 2, 60)) this.drawRecordFlag(game, cy);
     for (const pl of game.platforms) {
       if (!vis(pl.x, pl.y, 60)) continue;
       this.drawPlatform(pl, th, game.worldIndex);
@@ -450,9 +498,10 @@ export class Renderer {
     g.globalAlpha = 1;
     g.restore();
     this.drawMotes(game, cx, cy, true);
+    if (game.chase) this.drawChase(game, cx, cy);
 
     if (game.flash > 0) {
-      g.fillStyle = `rgba(255,240,210,${Math.min(0.7, game.flash / 20)})`;
+      g.fillStyle = `rgba(255,240,210,${Math.min(this.shakeOn ? 0.7 : 0.25, game.flash / 20)})`;
       g.fillRect(0, 0, vw, vh);
     }
     if (game.iris < 1) this.drawIris(game, cx, cy);
@@ -500,7 +549,9 @@ export class Renderer {
   drawPlayer(game, t) {
     const p = game.player;
     if (!game.playerVisible) return;
-    const frames = this.sprites.player[game.skin] || this.sprites.player.classica;
+    const spent = !p.dashAvail && game.state === 'play';
+    const set = spent ? this.sprites.playerSpent : this.sprites.player;
+    const frames = set[game.skin] || set.classica;
     const g = this.g;
     // rastro do dash
     for (const a of game.afterimages) {
@@ -665,6 +716,60 @@ export class Renderer {
       g.drawImage(this.tint(L.c), L.x - cx - r, L.y - cy - r, r * 2, r * 2);
     }
     g.globalAlpha = 1;
+    g.globalCompositeOperation = 'source-over';
+  }
+
+  // Bandeira no ponto do recorde do Modo Fuga
+  drawRecordFlag(game, cy) {
+    const g = this.g;
+    const x = Math.round(game.recordX);
+    let gy = 0;
+    const tx = Math.floor(x / T);
+    for (let ty = 2; ty < game.parsed.h; ty++) { const c = game.world.tileAt(tx, ty); if (c === TL.SOLID || c === TL.ICE || c === TL.ONEWAY) { gy = ty * T; break; } }
+    if (!gy) gy = 14 * T;
+    const t = game.frame;
+    g.fillStyle = '#d8c6ff'; g.fillRect(x, gy - 34, 1, 34);
+    const wave = Math.round(Math.sin(t / 10));
+    g.fillStyle = '#a983f0'; g.fillRect(x + 1, gy - 34 + wave, 12, 7);
+    g.fillStyle = '#6f3bb4'; g.fillRect(x + 1, gy - 28 + wave, 12, 1);
+    drawPixelText(g, String(game.recordM), x + 7, gy - 32 + wave, '#ffffff', '#2a0e4a');
+  }
+
+  // A Escuridão do Modo Fuga: uma parede viva que engole a tela pela esquerda.
+  drawChase(game, cx, cy) {
+    const g = this.g, vw = this.vw, vh = this.vh;
+    const t = game.frame;
+    const ex = game.chase.x - cx;
+    const p = game.player;
+    const dist = (p.x - game.chase.x) / T;
+    if (dist < 16) {
+      const a = Math.max(0, Math.min(0.75, (1 - dist / 16) * 0.75));
+      const grd = g.createLinearGradient(0, 0, vw * 0.45, 0);
+      grd.addColorStop(0, `rgba(40,6,60,${a})`);
+      grd.addColorStop(1, 'rgba(40,6,60,0)');
+      g.fillStyle = grd;
+      g.fillRect(0, 0, vw * 0.45, vh);
+    }
+    if (ex < -30) return;
+    const edge = (y) => Math.round(ex + Math.sin((y + cy) / 9 + t / 8) * 5 + Math.sin((y + cy) / 23 - t / 13) * 8);
+    g.fillStyle = '#040107';
+    for (let y = 0; y < vh; y += 2) { const x = edge(y); if (x > 0) g.fillRect(0, y, Math.min(vw, x), 2); }
+    g.globalCompositeOperation = 'lighter';
+    for (let y = 0; y < vh; y += 2) {
+      const x = edge(y);
+      if (x < -6 || x > vw) continue;
+      g.fillStyle = 'rgba(150,60,210,0.35)'; g.fillRect(x - 2, y, 3, 2);
+      g.fillStyle = 'rgba(80,20,120,0.25)'; g.fillRect(x + 1, y, 7, 2);
+    }
+    // olhos que piscam dentro da escuridão
+    for (let i = 0; i < 4; i++) {
+      const ey = ((i * 97 + 40) % Math.max(60, vh - 30)) + 15;
+      const exx = edge(ey) - 18 - (i % 2) * 22;
+      const blink = Math.sin(t / 40 + i * 2.1) > -0.85;
+      if (exx < 4 || !blink) continue;
+      g.fillStyle = i % 2 ? '#ff3a6a' : '#b066ff';
+      g.fillRect(exx, ey, 2, 1); g.fillRect(exx + 6, ey, 2, 1);
+    }
     g.globalCompositeOperation = 'source-over';
   }
 

@@ -124,8 +124,20 @@ function ember(pal, o) {
   return p.done();
 }
 
-export function buildPlayerFrames(skin) {
-  const pal = skin.pal;
+function mixHex(a, b, t) {
+  const A = parseInt(a.slice(1), 16), B = parseInt(b.slice(1), 16);
+  const ch = (n, sh) => (n >> sh) & 255;
+  const m = (sh) => Math.round(ch(A, sh) + (ch(B, sh) - ch(A, sh)) * t);
+  return `#${((1 << 24) | (m(16) << 16) | (m(8) << 8) | m(0)).toString(16).slice(1)}`;
+}
+
+// Chama "gasta": quando o dash foi usado no ar, a Faísca fica mais apagada até recarregar.
+export function spentPal(pal) {
+  return { o: pal.o, d: mixHex(pal.d, pal.o, 0.45), m: mixHex(pal.m, pal.d, 0.6), l: mixHex(pal.l, pal.m, 0.6), c: mixHex(pal.c, pal.l, 0.55), e: pal.e };
+}
+
+export function buildPlayerFrames(skin, spent = false) {
+  const pal = spent ? spentPal(skin.pal) : skin.pal;
   const f = {};
   f.idle = [
     ember(pal, { ang: -0.12, curl: 0.8, len: 9 }),
@@ -150,9 +162,9 @@ export function buildPlayerFrames(skin) {
   return f;
 }
 
-export function buildPlayerAll() {
+export function buildPlayerAll(spent = false) {
   const out = {};
-  for (const s of SKINS) out[s.id] = buildPlayerFrames(s);
+  for (const s of SKINS) out[s.id] = buildPlayerFrames(s, spent);
   return out;
 }
 
@@ -385,6 +397,7 @@ export function buildSprites() {
   const rock = { o: '#140c10', m: '#5b4048', l: '#7d5e66' };
   return {
     player: buildPlayerAll(),
+    playerSpent: buildPlayerAll(true),
     slime: [slime(0, P.slime), slime(1, P.slime)],
     bat: [bat(0, P.bat), bat(1, P.bat)],
     hog: [hedgehog(0, P.hog), hedgehog(1, P.hog)],

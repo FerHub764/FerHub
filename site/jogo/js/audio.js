@@ -94,6 +94,8 @@ export class Audio {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return;
       try { this.ctx = new AC(); } catch { return; }
+      // iPhone: toca mesmo com a chave do silencioso ligada
+      try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch { /* sem suporte */ }
       const c = this.ctx;
       this.master = c.createGain(); this.master.gain.value = 0.9;
       const comp = c.createDynamicsCompressor();
@@ -111,7 +113,7 @@ export class Audio {
       const d = this.noiseBuf.getChannelData(0);
       for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
     }
-    if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+    if (this.ctx.state !== 'running') this.ctx.resume().catch(() => {});
     if (this.wanted && !this.track) this.play(this.wanted);
   }
 
@@ -125,7 +127,7 @@ export class Audio {
   setSfx(on) { this.sfxOn = on; if (this.sfxBus) this.sfxBus.gain.setTargetAtTime(on ? 1 : 0, this.ctx.currentTime, 0.02); }
 
   suspend() { if (this.ctx && this.ctx.state === 'running') this.ctx.suspend().catch(() => {}); }
-  resume() { if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume().catch(() => {}); }
+  resume() { if (this.ctx && this.ctx.state !== 'running') this.ctx.resume().catch(() => {}); }
 
   // ---------- música ----------
   play(name) {
@@ -176,6 +178,8 @@ export class Audio {
     if (!this.track || !c) return;
     const { spec, parsed } = this.track;
     const sd = 60 / spec.bpm / 4;
+    // aba em segundo plano atrasa o relógio: pula as notas perdidas em vez de tocar tudo de uma vez
+    if (this.nextTime < c.currentTime - 0.05) this.nextTime = c.currentTime + 0.05;
     while (this.nextTime < c.currentTime + 0.15) {
       this.playStep(this.step, this.nextTime, sd, spec, parsed);
       this.nextTime += sd;
@@ -336,6 +340,13 @@ export class Audio {
       case 'nope': this.tone('sq50', 220, 180, t, 0.12, 0.08); break;
       case 'pause': this.tone('sq25', 660, 440, t, 0.08, 0.08); break;
       case 'tick': this.tone('sq12', 1600, 1600, t, 0.02, 0.05); break;
+      case 'ach':
+        ['C6', 'G6', 'E6', 'C7'].forEach((n, i) => this.tone('sq25', freq(n), freq(n), t + i * 0.07, 0.14, 0.08));
+        this.tone('tri', freq('C5'), freq('C5'), t + 0.28, 0.5, 0.14);
+        break;
+      case 'zone': ['A5', 'E6', 'A6'].forEach((n, i) => this.tone('sq12', freq(n), freq(n), t + i * 0.09, 0.3, 0.07)); break;
+      case 'milestone': this.tone('sq25', freq('E6'), freq('E6'), t, 0.08, 0.08); this.tone('sq25', freq('A6'), freq('A6'), t + 0.08, 0.16, 0.08); break;
+      case 'over': ['A4', 'F4', 'D4', 'A3'].forEach((n, i) => this.tone('tri', freq(n), freq(n), t + i * 0.16, 0.3, 0.16)); break;
       default:
     }
   }

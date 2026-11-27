@@ -50,19 +50,24 @@ export class Input {
   bindTouch(padEl, buttons, onFirstTouch) {
     this.padEl = padEl;
     this.btn = buttons;
+    const pass = (t) => t && t.closest && t.closest('[data-pass]');
     const handle = (e) => {
       if (!this.enabled) return;
+      // toques que começam num botão comum (pausa do console) seguem como clique normal
+      if ([...e.changedTouches].every((t) => pass(t.target))) return;
       e.preventDefault();
       if (!this.usedTouch) { this.usedTouch = true; if (onFirstTouch) onFirstTouch(); }
       const before = { ...this.touch };
       const next = { left: false, right: false, jump: false, dash: false };
       const pressed = new Set();
       for (const t of e.touches) {
+        if (pass(t.target)) continue;
         const hit = this.hitTest(t.clientX, t.clientY);
         if (hit) next[hit] = true;
       }
       if (e.type === 'touchstart') {
         for (const t of e.changedTouches) {
+          if (pass(t.target)) continue;
           const hit = this.hitTest(t.clientX, t.clientY);
           if (hit) pressed.add(hit);
         }
@@ -75,7 +80,7 @@ export class Input {
     // Mouse também funciona nos botões (útil para testar no computador).
     let mouseHit = null;
     padEl.addEventListener('mousedown', (e) => {
-      if (!this.enabled) return;
+      if (!this.enabled || pass(e.target)) return;
       mouseHit = this.hitTest(e.clientX, e.clientY, true);
       if (mouseHit) { this.touch[mouseHit] = true; if (mouseHit === 'jump' || mouseHit === 'dash') this.latch[mouseHit] = true; this.renderButtons(); }
     });
@@ -106,7 +111,8 @@ export class Input {
     const padBox = this.padEl.getBoundingClientRect();
     if (y < padBox.top) return null;
     const half = padBox.left + padBox.width / 2;
-    if (x < half) return x < mid ? 'left' : 'right';
+    const dpadSide = (dpadL + dpadR) / 2 < half ? x < half : x >= half;
+    if (dpadSide) return x < mid ? 'left' : 'right';
     return dist(r.jump) <= dist(r.dash) ? 'jump' : 'dash';
   }
 

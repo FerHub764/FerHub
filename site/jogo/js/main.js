@@ -6,8 +6,10 @@ import { Input } from './input.js';
 import { Audio } from './audio.js';
 import { WORLDS, LEVELS } from './levels/index.js';
 import { TITLE_SCENE } from './levels/scenes.js';
-import { loadSave, writeSave, recordCompletion, levelRec, totalGems, fmtTime, clearSave } from './save.js';
+import { loadSave, writeSave, recordCompletion, recordRun, levelRec, totalGems, fmtTime, clearSave } from './save.js';
 import { SKINS, buildPlayerFrames } from './sprites.js';
+import { RunGame, makeRun, ZONE_NAMES } from './endless.js';
+import { ACHIEVEMENTS, checkAchievements } from './achievements.js';
 
 const $ = (id) => document.getElementById(id);
 const app = $('app');
@@ -21,6 +23,7 @@ const audio = new Audio();
 audio.musicOn = save.settings.music;
 audio.sfxOn = save.settings.sfx;
 renderer.brightness = save.settings.brightness;
+renderer.shakeOn = save.settings.shake !== false;
 
 const TOTAL_GEMS = LEVELS.length * 3;
 const WORLD_STYLE = [
@@ -34,10 +37,11 @@ let game = null;
 let scene = null;
 let levelIndex = 0;
 let lastResult = null;
+let isRun = false;
 let isTouch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
 
 // ---------- utilidades de interface ----------
-const screens = ['title', 'map', 'pause', 'complete', 'shop', 'settings', 'ending'];
+const screens = ['title', 'map', 'pause', 'complete', 'shop', 'settings', 'ending', 'ach'];
 function showScreen(name) {
   app.classList.toggle('playing', name === null || name === 'pause');
   for (const s of screens) $(`scr-${s}`).hidden = s !== name;
@@ -56,6 +60,31 @@ function toast(msg) {
   el.hidden = false;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { el.hidden = true; }, 1800);
+}
+
+const CUP = '<svg viewBox="0 0 12 12"><path d="M2 1h8v1h1v3h-1v1H9v1H8v1H7v1h1v1h1v1H3v-1h1V9h1V8H4V7H3V6H2V5H1V2h1zm0 2v1h1V3zm7 0v1h1V3z"/></svg>';
+let trophyQueue = [];
+let trophyBusy = false;
+function showTrophies(list) {
+  trophyQueue.push(...list);
+  if (trophyBusy) return;
+  const nextOne = () => {
+    const a = trophyQueue.shift();
+    if (!a) { trophyBusy = false; return; }
+    trophyBusy = true;
+    const el = document.createElement('div');
+    el.className = 'toast trophy';
+    el.innerHTML = `${CUP}<div><small>TROFÉU</small>${a.name}</div>`;
+    app.appendChild(el);
+    audio.sfx('ach');
+    vibrate(40);
+    setTimeout(() => { el.remove(); nextOne(); }, 2400);
+  };
+  nextOne();
+}
+function achieve() {
+  const list = checkAchievements(save);
+  if (list.length) { writeSave(save); showTrophies(list); }
 }
 
 function click(id, fn, sound = 'ui') {
@@ -83,6 +112,7 @@ function layout() {
   app.classList.toggle('portrait', handheld);
   app.classList.toggle('landscape', !handheld);
   app.classList.toggle('touch', isTouch);
+  app.classList.toggle('lefty', !!save.settings.lefty);
   const size = { p: 0.82, m: 1, g: 1.2 }[save.settings.buttons] || 1;
   const base = handheld ? Math.min(76, W * 0.17) : Math.min(78, H * 0.17);
   app.style.setProperty('--btn', `${Math.round(Math.max(46, base * size))}px`);
@@ -103,9 +133,17 @@ window.addEventListener('orientationchange', () => setTimeout(layout, 120));
 
 // ---------- HUD ----------
 const hud = { brasas: $('hud-brasas'), gems: $('hud-gems'), timer: $('timer'), combo: $('combo'), hint: $('hint'), banner: $('banner') };
+const livesEl = $('hud-lives');
 function updateHud() {
   if (!game) return;
   hud.brasas.textContent = game.brasas;
+  hud.gems.hidden = isRun;
+  livesEl.hidden = !isRun;
+  if (isRun) {
+    [...livesEl.children].forEach((el, i) => el.classList.toggle('off', i >= game.lives));
+    hud.timer.hidden = false;
+    return;
+  }
   const g = hud.gems.children;
   game.gems.forEach((gm, i) => {
     if (!g[i]) return;
@@ -114,9 +152,9 @@ function updateHud() {
   hud.timer.hidden = !save.settings.timer;
 }
 let comboTimer = 0;
-function showCombo(n) {
-  if (n < 2) return;
-  hud.combo.innerHTML = `COMBO x${n}<small>+${Math.min(n, 8)} BRASAS</small>`;
+function showCombo(n, text) {
+  if (!text && n < 2) return;
+  hud.combo.innerHTML = text || `COMBO x${n}<small>+${Math.min(n, 8)} BRASAS</small>`;
   hud.combo.classList.add('show');
   hud.combo.classList.remove('bump');
   void hud.combo.offsetWidth;
@@ -169,6 +207,9 @@ function toTitle() {
   renderer.prepare(scene);
   $('t-wallet').textContent = save.wallet;
   $('t-gems').textContent = `${totalGems(save)}/${TOTAL_GEMS}`;
+  const runOpen = levelRec(save, '1-1').done;
+  $('t-run').classList.toggle('locked', !runOpen);
+  $('t-run-best').textContent = !runOpen ? 'termine a fase 1-1' : save.run.best ? `recorde: ${save.run.best} m` : 'corra da escuridão';
   showScreen('title');
   audio.play('title');
   releaseWake();
@@ -240,10 +281,20 @@ const hooks = {
   combo: (n) => showCombo(n),
   comboEnd: () => {},
   vibrate: (ms) => vibrate(ms),
-  complete: (st) => onComplete(st),
+  complete: (st) => (st.run ? onRunOver(st) : onComplete(st)),
+  runover: (st) => onRunOver(st),
+  pop: () => { save.stats.pops++; achieve(); },
+  zone: (z, n) => { audio.sfx('zone'); showBanner(`ZONA ${n}`, ZONE_NAMES[z]); },
+  milestone: (m, bonus) => { audio.sfx(bonus ? 'orb' : 'milestone'); showCombo(0, `${m} m<small>${bonus ? '+1 VIDA' : 'CONTINUE CORRENDO'}</small>`); },
+};
+const baseCombo = hooks.combo;
+hooks.combo = (n) => {
+  baseCombo(n);
+  if (n > save.stats.bestCombo) { save.stats.bestCombo = n; if (n === 3 || n === 6) achieve(); }
 };
 
 function startLevel(i) {
+  isRun = false;
   levelIndex = i;
   const def = LEVELS[i];
   const rec = levelRec(save, def.id);
@@ -263,13 +314,64 @@ function startLevel(i) {
   requestWake();
 }
 
+function startRun() {
+  if (!levelRec(save, '1-1').done) { toast('Termine a fase 1-1 para liberar o Modo Fuga'); audio.sfx('nope'); return; }
+  isRun = true;
+  const def = makeRun((Math.random() * 1e9) | 0);
+  game = new RunGame(def, { skin: save.skin, hooks });
+  if (save.run.best >= 20) { game.recordM = save.run.best; game.recordX = game.startX + save.run.best * 16; }
+  renderer.prepare(game);
+  game.setView(renderer.vw, renderer.vh);
+  mode = 'play';
+  input.clear();
+  input.enabled = true;
+  showScreen(null);
+  $('hud').hidden = false;
+  showHint(null);
+  hud.combo.classList.remove('show');
+  updateHud();
+  showBanner('MODO FUGA', 'Corra da escuridão!');
+  audio.play('rise');
+  requestWake();
+}
+
+function onRunOver(st) {
+  const res = recordRun(save, st);
+  mode = 'complete';
+  input.enabled = false;
+  showHint(null);
+  audio.sfx(st.escaped ? 'win' : 'over');
+  $('r-title').textContent = st.escaped ? 'Você escapou!' : 'A escuridão te alcançou';
+  $('r-sub').textContent = `Modo Fuga · corrida ${save.run.runs}`;
+  setRows([
+    ['Distância', `${st.distance} m${res.newRecord ? '<span class="badge night">RECORDE</span>' : ''}`],
+    ['Recorde', `${save.run.best} m`],
+    ['Brasas', `${st.brasas}`],
+    ['Inimigos', `${st.kills}`],
+    ['Maior combo', st.bestCombo >= 2 ? `x${st.bestCombo}` : '—'],
+  ]);
+  $('r-next').textContent = 'Correr de novo';
+  $('r-retry').hidden = true;
+  $('r-map').textContent = 'Menu';
+  showScreen('complete');
+  $('hud').hidden = true;
+  releaseWake();
+  achieve();
+}
+
+function setRows(rows) {
+  $('r-rows').innerHTML = rows.map(([k, v]) => `<div class="statrow"><span>${k}</span><span>${v}</span></div>`).join('');
+}
+
 function pause() {
   if (mode !== 'play') return;
   mode = 'pause';
   input.enabled = false;
   input.clear();
   audio.sfx('pause');
-  $('p-sub').textContent = `${game.def.id} · ${game.def.name}`;
+  $('p-sub').textContent = isRun ? `Modo Fuga · ${game.distance} m` : `${game.def.id} · ${game.def.name}`;
+  $('p-restart').textContent = isRun ? 'Nova corrida' : 'Reiniciar fase';
+  $('p-map').textContent = isRun ? 'Desistir' : 'Voltar ao mapa';
   syncPauseToggles();
   showScreen('pause');
 }
@@ -294,20 +396,34 @@ function onComplete(st) {
   const def = LEVELS[levelIndex];
   $('r-title').textContent = res.firstClear ? 'Fase concluída!' : 'Fase concluída';
   $('r-sub').textContent = `${def.id} · ${def.name}`;
-  $('r-time').innerHTML = fmtTime(st.time) + (res.newRecord && !res.firstClear ? '<span class="badge">RECORDE</span>' : '');
   const bonus = st.brasas - st.coins;
-  $('r-coins').textContent = `${st.coins}/${st.coinsTotal}${bonus > 0 ? `  +${bonus} de combo` : ''}`;
-  $('r-gems').innerHTML = st.gems.map((g, i) => `<i class="gem${g ? ' on' : levelRec(save, def.id).gems[i] ? ' had' : ''}${res.newGems[i] ? ' pop' : ''}" style="animation-delay:${0.25 + i * 0.18}s"></i>`).join('');
-  $('r-combo').textContent = st.bestCombo >= 2 ? `x${st.bestCombo}` : '—';
-  $('r-deaths').textContent = String(st.deaths);
+  const rec = levelRec(save, def.id);
+  setRows([
+    ['Tempo', fmtTime(st.time) + (res.newRecord && !res.firstClear ? '<span class="badge">RECORDE</span>' : '')],
+    ['Brasas', `${st.coins}/${st.coinsTotal}${bonus > 0 ? `  +${bonus} de combo` : ''}`],
+    ['Gemas', `<span class="gems">${st.gems.map((g, i) => `<i class="gem${g ? ' on' : rec.gems[i] ? ' had' : ''}${res.newGems[i] ? ' pop' : ''}" style="animation-delay:${0.25 + i * 0.18}s"></i>`).join('')}</span>`],
+    ['Maior combo', st.bestCombo >= 2 ? `x${st.bestCombo}` : '—'],
+    ['Apagadas', String(st.deaths)],
+  ]);
+  $('r-retry').hidden = false;
+  $('r-map').textContent = 'Mapa';
   const last = levelIndex === LEVELS.length - 1;
   $('r-next').textContent = last ? 'Ver o final' : 'Próxima fase';
   showScreen('complete');
   $('hud').hidden = true;
   releaseWake();
+  achieve();
+}
+
+// desistir no meio da corrida ainda conta a distância e as brasas
+function endRunEarly() {
+  if (!game || !isRun) { toTitle(); return; }
+  game.lives = 0;
+  onRunOver(game.stats());
 }
 
 function next() {
+  if (isRun) { startRun(); return; }
   if (levelIndex === LEVELS.length - 1) { toEnding(); return; }
   startLevel(levelIndex + 1);
 }
@@ -374,11 +490,29 @@ function buildShop() {
       writeSave(save);
       scene = makeScene(mode === 'ending');
       buildShop();
+      achieve();
     });
     card.appendChild(b);
     box.appendChild(card);
   }
 }
+function buildAch() {
+  const got = ACHIEVEMENTS.filter((a) => save.ach[a.id]).length;
+  $('a-count').textContent = `${got}/${ACHIEVEMENTS.length}`;
+  $('achs').innerHTML = ACHIEVEMENTS.map((a) => `<div class="ach${save.ach[a.id] ? ' on' : ''}"><span class="cup">${CUP}</span><div><b>${a.name}</b><span>${a.desc}</span></div></div>`).join('');
+  const st = save.stats;
+  const mins = Math.round(st.playFrames / 3600);
+  $('a-stats').innerHTML = [
+    ['Tempo jogado', mins < 60 ? `${mins} min` : `${Math.floor(mins / 60)} h ${mins % 60} min`],
+    ['Inimigos derrotados', st.kills],
+    ['Maior combo', st.bestCombo ? `x${st.bestCombo}` : '—'],
+    ['Vezes que se apagou', st.deaths],
+    ['Brasas ganhas', st.earned],
+    ['Recorde no Modo Fuga', `${save.run.best} m`],
+  ].map(([k, v]) => `<div class="statrow"><span>${k}</span><span>${v}</span></div>`).join('');
+}
+function toAch() { mode = 'ach'; buildAch(); showScreen('ach'); }
+
 let shopFrom = 'title';
 function toShop(from) { shopFrom = from; mode = 'shop'; buildShop(); showScreen('shop'); }
 
@@ -386,7 +520,7 @@ function toShop(from) { shopFrom = from; mode = 'shop'; buildShop(); showScreen(
 let settingsFrom = 'title';
 function syncSettings() {
   const s = save.settings;
-  for (const k of ['music', 'sfx', 'vibrate', 'timer']) $(`o-${k}`).setAttribute('aria-pressed', String(!!s[k]));
+  for (const k of ['music', 'sfx', 'vibrate', 'timer', 'lefty', 'shake']) $(`o-${k}`).setAttribute('aria-pressed', String(!!s[k]));
   for (const b of $('o-bright').children) b.setAttribute('aria-pressed', String(Number(b.dataset.v) === s.brightness));
   for (const b of $('o-buttons').children) b.setAttribute('aria-pressed', String(b.dataset.v === s.buttons));
 }
@@ -396,11 +530,12 @@ function setSetting(k, v) {
   if (k === 'music') audio.setMusic(v);
   if (k === 'sfx') audio.setSfx(v);
   if (k === 'brightness') renderer.brightness = v;
-  if (k === 'buttons') layout();
+  if (k === 'shake') renderer.shakeOn = v;
+  if (k === 'buttons' || k === 'lefty') layout();
   writeSave(save);
   syncSettings();
 }
-for (const k of ['music', 'sfx', 'vibrate', 'timer']) click(`o-${k}`, () => setSetting(k, !save.settings[k]));
+for (const k of ['music', 'sfx', 'vibrate', 'timer', 'lefty', 'shake']) click(`o-${k}`, () => setSetting(k, !save.settings[k]));
 for (const b of $('o-bright').children) b.addEventListener('click', () => { audio.sfx('ui'); setSetting('brightness', Number(b.dataset.v)); });
 for (const b of $('o-buttons').children) b.addEventListener('click', () => { audio.sfx('ui'); setSetting('buttons', b.dataset.v); });
 let resetArmed = false;
@@ -409,6 +544,8 @@ click('o-reset', () => {
   save = clearSave();
   audio.setMusic(true); audio.setSfx(true);
   renderer.brightness = 1;
+  renderer.shakeOn = true;
+  layout();
   scene = makeScene();
   resetArmed = false;
   $('o-reset').textContent = 'Apagar progresso';
@@ -418,6 +555,9 @@ click('o-reset', () => {
 
 // ---------- botões ----------
 click('t-play', () => toMap());
+click('t-run', () => startRun());
+click('t-ach', () => toAch());
+click('a-back', () => toTitle(), 'uiBack');
 click('t-shop', () => toShop('title'));
 click('t-settings', () => toSettings('title'));
 click('btn-full', () => {
@@ -433,14 +573,15 @@ click('m-shop', () => toShop('map'));
 click('s-back', () => (shopFrom === 'map' ? toMap() : toTitle()), 'uiBack');
 click('o-back', () => (settingsFrom === 'map' ? toMap() : toTitle()), 'uiBack');
 click('btn-pause', () => pause(), null);
+click('b-pill', () => pause(), null);
 click('p-resume', () => resume());
-click('p-restart', () => startLevel(levelIndex));
-click('p-map', () => toMap(), 'uiBack');
+click('p-restart', () => (isRun ? startRun() : startLevel(levelIndex)));
+click('p-map', () => (isRun ? endRunEarly() : toMap()), 'uiBack');
 click('p-music', () => { setSetting('music', !save.settings.music); syncPauseToggles(); });
 click('p-sfx', () => { setSetting('sfx', !save.settings.sfx); syncPauseToggles(); });
 click('r-next', () => next());
 click('r-retry', () => startLevel(levelIndex));
-click('r-map', () => toMap(), 'uiBack');
+click('r-map', () => (isRun ? toTitle() : toMap()), 'uiBack');
 click('e-map', () => { scene = makeScene(); toMap(); });
 
 input.onPause = () => {
@@ -452,6 +593,7 @@ input.onAnyKey = (e) => {
   audio.unlock();
   if (isTouch && !e.repeat) { isTouch = false; layout(); }
   if (e.code === 'Enter' && mode === 'title' && document.activeElement === document.body) toMap();
+  if (e.code === 'Escape' && (mode === 'shop' || mode === 'settings' || mode === 'ach')) toTitle();
 };
 input.bindTouch($('pad'), { left: $('b-left'), right: $('b-right'), jump: $('b-jump'), dash: $('b-dash') }, () => {
   if (!isTouch) { isTouch = true; layout(); }
@@ -496,7 +638,22 @@ function frame(now) {
   }
   renderer.draw(cur);
   if (mode === 'title') drawHero(cur.frame);
-  if (game && ++hudTick % 6 === 0 && save.settings.timer) hud.timer.textContent = fmtTime(game.time);
+  syncDashButton();
+  if (game && ++hudTick % 6 === 0) {
+    if (isRun) hud.timer.textContent = `${game.distance} m`;
+    else if (save.settings.timer) hud.timer.textContent = fmtTime(game.time);
+  }
+}
+
+// anel do botão de dash: aceso quando o dash está carregado
+const dashBtn = $('b-dash');
+let dashShown = true;
+function syncDashButton() {
+  const ready = !game || game.player.dashAvail || game.state !== 'play';
+  if (ready === dashShown) return;
+  dashShown = ready;
+  dashBtn.classList.toggle('spent', !ready);
+  if (ready) { dashBtn.classList.remove('ready'); void dashBtn.offsetWidth; dashBtn.classList.add('ready'); }
 }
 
 function boot() {
@@ -510,7 +667,7 @@ function boot() {
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => layout());
 }
 
-window.__faisca = { get game() { return game; }, get mode() { return mode; }, startLevel, LEVELS };
+window.__faisca = { get game() { return game; }, get mode() { return mode; }, startLevel, startRun, LEVELS };
 
 const hot = window.claude && window.claude.hot;
 if (hot && hot.ready) hot.ready(boot); else boot();
