@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Faísca</title>
+<meta name="description" content="Faísca: um jogo de plataforma para celular. Uma pequena brasa atravessa cavernas escuras com dash, pulo na parede e combos.">
+<meta name="theme-color" content="#0d0710">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Faísca">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<!--build:head-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Tela única de jogo, tema escuro fixo: a caverna é sempre escura. */
+:root {
+  --night: #0d0710;
+  --panel: #1c1119;
+  --panel-2: #2a1922;
+  --line: #4b2c33;
+  --ink: #fff2dc;
+  --ink-dim: #c8ae95;
+  --ember: #ffb45a;
+  --ember-deep: #e2541c;
+  --ruby: #ff5a6e;
+  --cool: #7cc8ff;
+  --leaf: #a6d45a;
+  --shadow: #07030a;
+  --f-display: 'Pixelify Sans', ui-monospace, 'Courier New', monospace;
+  --f-body: 'Pixelify Sans', ui-monospace, 'Courier New', monospace;
+  --btn: 64px;
+  color-scheme: dark;
+}
+html, body { height: 100%; margin: 0; background: var(--night); color: var(--ink); overflow: hidden; }
+body { font-family: var(--f-body); -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
+button { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
+
+#app {
+  position: fixed; inset: 0;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+  display: flex; flex-direction: column;
+  background: radial-gradient(120% 80% at 50% 0%, #26121d 0%, var(--night) 60%);
+}
+#stage { position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; background: #000; }
+#screen { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
+
+/* ---------- HUD ---------- */
+#hud { position: absolute; inset: 0; pointer-events: none; font-family: var(--f-display); }
+.hud-top { position: absolute; top: 8px; left: 10px; right: 10px; display: flex; align-items: center; gap: 12px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 7px; background: rgba(13, 7, 16, 0.62); border: 2px solid rgba(255, 180, 90, 0.25); border-radius: 4px; font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; text-shadow: 0 2px 0 var(--shadow); }
+.ico-brasa { width: 12px; height: 12px; background: radial-gradient(circle at 40% 35%, #fff4c8 0 18%, #ffb23a 20% 55%, #e0631e 57% 100%); border-radius: 50%; box-shadow: 0 0 8px #ff8a2a; }
+.gems { display: inline-flex; gap: 4px; }
+.gem { width: 12px; height: 12px; transform: rotate(45deg) scale(0.8); background: #2a2230; border: 2px solid #4a3a4e; }
+.gem.on { background: linear-gradient(135deg, #ffe0e0, #ff6f7d 40%, #8a0f2d); border-color: #3d0613; box-shadow: 0 0 10px #ff4a6a; }
+.gem.had { background: linear-gradient(135deg, #d6e4ff, #7088b0 50%, #4b5a7a); border-color: #232a3d; }
+#timer { margin-left: auto; }
+.icon-btn { pointer-events: auto; width: 40px; height: 40px; display: grid; place-items: center; background: rgba(13, 7, 16, 0.62); border: 2px solid rgba(255, 180, 90, 0.3); border-radius: 6px; cursor: pointer; padding: 0; }
+.icon-btn:active { transform: translateY(2px); }
+.icon-btn svg { width: 18px; height: 18px; fill: var(--ink); }
+#combo { position: absolute; top: 56px; left: 0; right: 0; text-align: center; font-size: 30px; font-weight: 700; color: var(--ember); text-shadow: 0 3px 0 #6a1d08, 0 0 18px rgba(255, 140, 40, 0.8); opacity: 0; transform: scale(0.6); transition: opacity 0.25s, transform 0.25s; letter-spacing: 1px; }
+#combo.show { opacity: 1; transform: scale(1); }
+#combo.bump { animation: bump 0.22s ease-out; }
+#combo small { display: block; font-size: 14px; color: var(--ink); letter-spacing: 3px; text-shadow: 0 2px 0 var(--shadow); }
+@keyframes bump { 0% { transform: scale(1.35); } 100% { transform: scale(1); } }
+#banner { position: absolute; left: 0; right: 0; top: 34%; text-align: center; pointer-events: none; opacity: 0; transition: opacity 0.4s; }
+#banner.show { opacity: 1; }
+#banner .n { font-size: 16px; letter-spacing: 6px; color: var(--ember); text-shadow: 0 2px 0 var(--shadow); }
+#banner .t { font-size: 34px; font-weight: 700; text-shadow: 0 3px 0 var(--shadow), 0 0 24px rgba(255, 160, 60, 0.45); }
+#hint { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%) translateY(8px); max-width: min(92%, 460px); padding: 10px 14px; background: rgba(20, 11, 18, 0.9); border: 2px solid var(--line); border-radius: 6px; font-size: 16px; line-height: 1.35; text-align: center; opacity: 0; transition: opacity 0.2s, transform 0.2s; box-shadow: 0 4px 0 var(--shadow); pointer-events: none; }
+#hint.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+#hint b { color: var(--ember); font-weight: 700; }
+
+/* ---------- controles de toque ---------- */
+#pad { display: none; touch-action: none; }
+.touch #pad { display: block; }
+.landscape:not(.playing) #pad { display: none !important; }
+.pbtn { position: absolute; box-sizing: border-box; width: var(--btn); height: var(--btn); border-radius: 50%; display: grid; place-items: center; background: rgba(255, 244, 224, 0.1); border: 2px solid rgba(255, 244, 224, 0.32); box-shadow: 0 4px 0 rgba(0, 0, 0, 0.35); transition: transform 0.05s, background 0.05s; }
+.pbtn svg { width: 44%; height: 44%; fill: rgba(255, 244, 224, 0.85); }
+.pbtn.on { transform: translateY(3px) scale(0.96); background: rgba(255, 180, 90, 0.35); border-color: rgba(255, 200, 120, 0.8); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35); }
+.pbtn .lbl { position: absolute; bottom: -18px; font-size: 11px; letter-spacing: 2px; color: rgba(255, 244, 224, 0.6); }
+.pbtn.act-jump { width: calc(var(--btn) * 1.18); height: calc(var(--btn) * 1.18); }
+.pbtn.act-dash svg { fill: #ffb45a; }
+
+/* paisagem: botões por cima da tela */
+.landscape.touch #pad { position: absolute; inset: 0; z-index: 5; pointer-events: auto; }
+.landscape #pad .dpad { position: absolute; left: calc(18px + env(safe-area-inset-left, 0px)); bottom: calc(24px + env(safe-area-inset-bottom, 0px)); width: calc(var(--btn) * 2 + 14px); height: var(--btn); }
+.landscape #pad .acts { position: absolute; right: calc(18px + env(safe-area-inset-right, 0px)); bottom: calc(24px + env(safe-area-inset-bottom, 0px)); width: calc(var(--btn) * 2.3 + 14px); height: calc(var(--btn) * 1.7); }
+.landscape .b-left { left: 0; top: 0; }
+.landscape .b-right { right: 0; top: 0; }
+.landscape .act-dash { left: 0; bottom: 0; }
+.landscape .act-jump { right: 0; top: 0; }
+.landscape .console-deco { display: none; }
+
+/* retrato: um console de bolso, tela em cima e botões embaixo */
+.portrait #stage { flex: 0 0 auto; height: var(--stage-h, 60%); border-radius: 0 0 14px 14px; box-shadow: 0 6px 0 #05020a, inset 0 0 0 2px #000; }
+.portrait.touch #pad { position: relative; flex: 1 1 auto; min-height: 0; margin-top: 8px; }
+.portrait #pad .dpad { position: absolute; left: 6%; top: 50%; transform: translateY(-30%); width: calc(var(--btn) * 2.2 + 6px); height: calc(var(--btn) * 1.15); background: #12090f; border-radius: 40px; box-shadow: inset 0 3px 0 #000, 0 2px 0 #3a2230; }
+.portrait .b-left, .portrait .b-right { top: 50%; width: calc(var(--btn) * 1.05); height: calc(var(--btn) * 1.0); border-radius: 30px; }
+.portrait .b-left { left: 3px; transform: translateY(-50%); }
+.portrait .b-right { right: 3px; transform: translateY(-50%); }
+.portrait .b-left.on, .portrait .b-right.on { transform: translateY(-50%) scale(0.95); }
+.portrait #pad .acts { position: absolute; right: 5%; top: 50%; transform: translateY(-50%); width: calc(var(--btn) * 2.35); height: calc(var(--btn) * 2.3); }
+.portrait .act-dash { left: 0; bottom: 6%; }
+.portrait .act-jump { right: 0; top: 4%; }
+.portrait .pbtn { background: linear-gradient(180deg, #ff9a4a, #d9481b); border: 3px solid #5a1a0f; box-shadow: 0 5px 0 #3a0d07; }
+.portrait .pbtn svg { fill: #fff2dc; }
+.portrait .pbtn.on { box-shadow: 0 1px 0 #3a0d07; background: linear-gradient(180deg, #ffb46a, #ff6a2a); }
+.portrait .b-left, .portrait .b-right { background: linear-gradient(180deg, #3a2834, #24161f); border-color: #0d070b; box-shadow: 0 4px 0 #050205; }
+.portrait .pbtn .lbl { color: var(--ink-dim); bottom: -22px; }
+.console-deco { position: absolute; inset: 0; pointer-events: none; }
+.console-deco .brand { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); font-family: var(--f-display); font-size: 13px; letter-spacing: 6px; color: #5a3a45; text-shadow: 0 1px 0 #000; white-space: nowrap; }
+.console-deco .grill { position: absolute; right: 9%; bottom: 14px; width: 54px; height: 22px; background-image: radial-gradient(circle, #05020a 0 2px, transparent 2.5px); background-size: 9px 9px; opacity: 0.8; transform: rotate(-20deg); }
+
+/* ---------- telas ---------- */
+#screens { position: absolute; inset: 0; z-index: 10; pointer-events: none; }
+.scr { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; pointer-events: auto; overflow-y: auto; padding: calc(14px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) calc(18px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); box-sizing: border-box; animation: fadein 0.25s ease-out; }
+.scr.dim { background: rgba(8, 4, 10, 0.72); }
+@keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+.panel { width: min(100%, 440px); background: var(--panel); border: 2px solid var(--line); border-radius: 8px; box-shadow: 0 6px 0 var(--shadow), inset 0 2px 0 rgba(255, 255, 255, 0.04); padding: 18px; box-sizing: border-box; }
+.btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 52px; padding: 10px 16px; border: 2px solid #5a1a0f; border-radius: 6px; background: linear-gradient(180deg, #ffb45a, #ef7425); color: #2a0b03; font-size: 20px; font-weight: 700; letter-spacing: 1px; box-shadow: 0 5px 0 #7a2508; cursor: pointer; text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35); }
+.btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #7a2508; }
+.btn.ghost { background: var(--panel-2); color: var(--ink); border-color: var(--line); box-shadow: 0 5px 0 var(--shadow); text-shadow: none; }
+.btn.ghost:active { box-shadow: 0 2px 0 var(--shadow); }
+.btn.small { min-height: 42px; font-size: 16px; }
+.btn:disabled { filter: grayscale(0.8) brightness(0.6); cursor: default; }
+.btn:focus-visible, .icon-btn:focus-visible, .lvl:focus-visible, .seg button:focus-visible, .tog:focus-visible { outline: 3px solid var(--cool); outline-offset: 2px; }
+.stack { display: flex; flex-direction: column; gap: 14px; }
+.row { display: flex; gap: 10px; }
+.row > * { flex: 1 1 0; min-width: 0; }
+
+/* título */
+#scr-title { justify-content: center; gap: 22px; background: linear-gradient(180deg, rgba(13, 7, 16, 0) 30%, rgba(13, 7, 16, 0.75) 100%); }
+.logo { text-align: center; margin-top: auto; }
+.logo canvas { display: block; width: 80px; height: 80px; margin: 0 auto 4px; image-rendering: pixelated; filter: drop-shadow(0 0 16px rgba(255, 150, 50, 0.85)); animation: bob 2.4s ease-in-out infinite; }
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@media (max-height: 420px) { .logo canvas { width: 56px; height: 56px; } .logo h1 { font-size: clamp(44px, 12vw, 84px); } #scr-title { gap: 14px; } }
+.logo h1 { margin: 0; font-family: var(--f-display); font-size: clamp(56px, 16vw, 112px); line-height: 0.9; font-weight: 700; letter-spacing: 4px; color: #ffe3b0; text-shadow: 0 4px 0 #a8380f, 0 8px 0 #4a1205, 0 0 30px rgba(255, 140, 40, 0.75), 0 0 80px rgba(255, 100, 20, 0.45); animation: flicker 3.2s infinite; }
+.logo p { margin: 12px 0 0; font-size: 17px; letter-spacing: 3px; color: var(--ink-dim); text-shadow: 0 2px 0 var(--shadow); }
+@keyframes flicker { 0%, 100% { opacity: 1; } 46% { opacity: 1; } 48% { opacity: 0.82; } 50% { opacity: 1; } 72% { opacity: 0.93; } 74% { opacity: 1; } }
+.title-menu { width: min(100%, 320px); margin-bottom: auto; }
+.title-foot { display: flex; gap: 10px; justify-content: center; }
+.corner { position: absolute; top: calc(10px + env(safe-area-inset-top, 0px)); right: calc(10px + env(safe-area-inset-right, 0px)); display: flex; gap: 8px; }
+
+/* mapa */
+.topbar { width: min(100%, 720px); display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.topbar h2 { margin: 0 auto 0 4px; font-size: 24px; text-shadow: 0 2px 0 var(--shadow); }
+.worlds { width: min(100%, 720px); display: flex; flex-direction: column; gap: 16px; }
+.world { position: relative; border: 2px solid var(--line); border-radius: 10px; padding: 14px; box-shadow: 0 6px 0 var(--shadow); overflow: hidden; }
+.world::before { content: ''; position: absolute; inset: 0; background: var(--wbg); opacity: 0.95; z-index: -1; }
+.world header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
+.world h3 { margin: 0; font-size: 20px; text-shadow: 0 2px 0 var(--shadow); }
+.world .wnum { font-size: 13px; letter-spacing: 3px; color: var(--wacc); }
+.world .wgems { margin-left: auto; font-size: 15px; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+.levels { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.lvl { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 4px 9px; background: rgba(10, 5, 12, 0.55); border: 2px solid rgba(255, 255, 255, 0.12); border-radius: 8px; cursor: pointer; box-shadow: 0 4px 0 rgba(0, 0, 0, 0.45); min-width: 0; }
+.lvl:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0, 0, 0, 0.45); }
+.lvl .ln { font-size: 22px; font-weight: 700; color: var(--wacc); text-shadow: 0 2px 0 var(--shadow); }
+.lvl .lname { font-size: 12px; line-height: 1.2; color: var(--ink-dim); text-align: center; min-height: 2.4em; overflow-wrap: anywhere; }
+.lvl .gems .gem { width: 8px; height: 8px; border-width: 1px; }
+.lvl .lt { font-size: 11px; color: var(--ink-dim); font-variant-numeric: tabular-nums; min-height: 1.2em; }
+.lvl.done { border-color: color-mix(in srgb, var(--wacc) 55%, transparent); }
+.lvl.locked { cursor: default; opacity: 0.45; }
+.lvl .lock { width: 20px; height: 22px; fill: var(--ink-dim); }
+.lvl.next { animation: pulse 1.4s infinite; }
+@keyframes pulse { 0%, 100% { box-shadow: 0 4px 0 rgba(0, 0, 0, 0.45), 0 0 0 0 color-mix(in srgb, var(--wacc) 60%, transparent); } 50% { box-shadow: 0 4px 0 rgba(0, 0, 0, 0.45), 0 0 0 5px color-mix(in srgb, var(--wacc) 0%, transparent); } }
+.wlock { font-size: 14px; color: var(--ink-dim); margin-top: 10px; }
+
+/* resultado */
+.result h2 { margin: 0; text-align: center; font-size: 28px; color: var(--ember); text-shadow: 0 3px 0 #5a1a0f; }
+.result .sub { text-align: center; color: var(--ink-dim); margin: 4px 0 14px; font-size: 15px; letter-spacing: 1px; }
+.statrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 2px; border-bottom: 2px dashed rgba(255, 255, 255, 0.07); font-size: 18px; font-variant-numeric: tabular-nums; }
+.statrow span:first-child { color: var(--ink-dim); }
+.badge { display: inline-block; margin-left: 8px; padding: 2px 7px; font-size: 12px; letter-spacing: 1px; background: var(--ruby); color: #2a0510; border-radius: 3px; vertical-align: 2px; }
+.result .gems .gem { width: 16px; height: 16px; }
+.result .gems .gem.pop { animation: gempop 0.5s ease-out both; }
+@keyframes gempop { 0% { transform: rotate(45deg) scale(0); } 70% { transform: rotate(45deg) scale(1.3); } 100% { transform: rotate(45deg) scale(0.8); } }
+
+/* loja */
+.skins { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 12px; width: min(100%, 720px); }
+.skin { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px 8px; background: var(--panel); border: 2px solid var(--line); border-radius: 8px; box-shadow: 0 5px 0 var(--shadow); }
+.skin canvas { width: 80px; height: 80px; image-rendering: pixelated; }
+.skin .sn { font-size: 17px; font-weight: 600; }
+.skin.eq { border-color: var(--ember); }
+.skin .btn { min-height: 40px; font-size: 15px; }
+.wallet { margin-left: auto; }
+
+/* ajustes */
+.setting { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 2px dashed rgba(255, 255, 255, 0.07); font-size: 18px; }
+.tog { width: 62px; height: 32px; border-radius: 16px; background: #3a2a33; border: 2px solid var(--line); position: relative; cursor: pointer; flex: none; padding: 0; }
+.tog::after { content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: var(--ink-dim); transition: left 0.15s, background 0.15s; }
+.tog[aria-pressed='true'] { background: #6a2a12; border-color: var(--ember-deep); }
+.tog[aria-pressed='true']::after { left: 33px; background: var(--ember); box-shadow: 0 0 10px var(--ember); }
+.seg { display: inline-flex; border: 2px solid var(--line); border-radius: 6px; overflow: hidden; flex: none; }
+.seg button { padding: 6px 10px; background: var(--panel-2); border: 0; font-size: 15px; cursor: pointer; }
+.seg button[aria-pressed='true'] { background: var(--ember); color: #2a0b03; }
+.danger { background: linear-gradient(180deg, #ff7a86, #d93a4c); border-color: #5a0f18; box-shadow: 0 5px 0 #5a0f18; color: #2a0308; }
+.note { font-size: 14px; color: var(--ink-dim); line-height: 1.4; margin: 10px 0 0; }
+
+/* final */
+#scr-ending { justify-content: center; background: linear-gradient(180deg, rgba(13, 7, 16, 0) 35%, rgba(13, 7, 16, 0.85) 100%); }
+.ending h2 { font-size: 30px; text-align: center; margin: 0 0 6px; color: #ffe3b0; text-shadow: 0 3px 0 #a8380f, 0 0 26px rgba(255, 140, 40, 0.7); }
+.ending p { text-align: center; color: var(--ink-dim); line-height: 1.45; margin: 0 0 12px; font-size: 16px; }
+
+.toast { position: absolute; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); padding: 8px 14px; background: var(--panel); border: 2px solid var(--ember); border-radius: 6px; z-index: 30; font-size: 15px; box-shadow: 0 4px 0 var(--shadow); animation: fadein 0.2s; pointer-events: none; }
+#rotate-tip { display: none; }
+
+@media (max-height: 460px) {
+  .scr { padding-top: calc(8px + env(safe-area-inset-top, 0px)); padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
+  .panel { padding: 12px 16px; }
+  .statrow { padding: 5px 2px; font-size: 16px; }
+  .result h2, .ending h2 { font-size: 22px; }
+  .result .sub { margin: 2px 0 6px; }
+  .btn { min-height: 44px; font-size: 18px; }
+  .stack { gap: 10px; }
+  .ending p { font-size: 14px; margin-bottom: 6px; }
+  .ending .note { display: none; }
+  .topbar { margin-bottom: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .logo h1, .lvl.next, .logo canvas { animation: none; }
+  .scr { animation: none; }
+}
+</style>
+<!--/build:head-->
+</head>
+<body>
+<!--build:body-->
+<div id="app" class="landscape">
+  <div id="stage">
+    <canvas id="screen" aria-label="Tela do jogo Faísca"></canvas>
+    <div id="hud" hidden>
+      <div class="hud-top">
+        <span class="chip"><span class="ico-brasa"></span><span id="hud-brasas">0</span></span>
+        <span class="chip gems" id="hud-gems"><i class="gem"></i><i class="gem"></i><i class="gem"></i></span>
+        <span class="chip" id="timer">00:00.00</span>
+        <button class="icon-btn" id="btn-pause" aria-label="Pausar"><svg viewBox="0 0 10 10"><rect x="2" y="1.5" width="2" height="7"/><rect x="6" y="1.5" width="2" height="7"/></svg></button>
+      </div>
+      <div id="combo"></div>
+      <div id="banner"><div class="n" id="banner-n"></div><div class="t" id="banner-t"></div></div>
+      <div id="hint"></div>
+    </div>
+  </div>
+  <div id="pad" aria-hidden="true">
+    <div class="console-deco"><div class="brand">FAÍSCA · PORTÁTIL</div><div class="grill"></div></div>
+    <div class="dpad">
+      <div class="pbtn b-left" id="b-left"><svg viewBox="0 0 10 10"><path d="M7 1 L2 5 L7 9 Z"/></svg></div>
+      <div class="pbtn b-right" id="b-right"><svg viewBox="0 0 10 10"><path d="M3 1 L8 5 L3 9 Z"/></svg></div>
+    </div>
+    <div class="acts">
+      <div class="pbtn act-dash" id="b-dash"><svg viewBox="0 0 10 10"><path d="M5 0.5 C6.5 2.5 8.5 4 8.5 6.4 A3.5 3.5 0 0 1 1.5 6.4 C1.5 5 2.4 4 3.2 3.4 C3.3 4.4 3.8 5 4.4 5.2 C4 3.6 4.4 2 5 0.5 Z"/></svg><span class="lbl">DASH</span></div>
+      <div class="pbtn act-jump" id="b-jump"><svg viewBox="0 0 10 10"><path d="M5 1.5 L9 7 L6.4 7 L6.4 9 L3.6 9 L3.6 7 L1 7 Z"/></svg><span class="lbl">PULO</span></div>
+    </div>
+  </div>
+  <div id="screens">
+    <section class="scr" id="scr-title" hidden>
+      <div class="corner">
+        <button class="icon-btn" id="btn-full" aria-label="Tela cheia"><svg viewBox="0 0 10 10"><path d="M1 1h3v1.4H2.4V4H1zM6 1h3v3H7.6V2.4H6zM1 6h1.4v1.6H4V9H1zM7.6 6H9v3H6V7.6h1.6z"/></svg></button>
+      </div>
+      <div class="logo">
+        <canvas id="t-hero" width="20" height="20" aria-hidden="true"></canvas>
+        <h1>FAÍSCA</h1>
+        <p>A CHAMA DA MONTANHA OCA</p>
+      </div>
+      <div class="title-menu stack">
+        <button class="btn" id="t-play">Jogar</button>
+        <div class="row">
+          <button class="btn ghost" id="t-shop">Loja</button>
+          <button class="btn ghost" id="t-settings">Ajustes</button>
+        </div>
+        <div class="title-foot">
+          <span class="chip"><span class="ico-brasa"></span><span id="t-wallet">0</span></span>
+          <span class="chip"><i class="gem on" style="transform:rotate(45deg) scale(.7)"></i><span id="t-gems">0/36</span></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="scr dim" id="scr-map" hidden>
+      <div class="topbar">
+        <button class="icon-btn" id="m-back" aria-label="Voltar"><svg viewBox="0 0 10 10"><path d="M6.5 1 L2.5 5 L6.5 9 L7.6 7.9 L4.7 5 L7.6 2.1 Z"/></svg></button>
+        <h2>Mapa</h2>
+        <span class="chip"><span class="ico-brasa"></span><span id="m-wallet">0</span></span>
+        <button class="icon-btn" id="m-shop" aria-label="Loja"><svg viewBox="0 0 10 10"><path d="M5 0.5 C6.5 2.5 8.5 4 8.5 6.4 A3.5 3.5 0 0 1 1.5 6.4 C1.5 5 2.4 4 3.2 3.4 C3.3 4.4 3.8 5 4.4 5.2 C4 3.6 4.4 2 5 0.5 Z"/></svg></button>
+      </div>
+      <div class="worlds" id="worlds"></div>
+    </section>
+
+    <section class="scr dim" id="scr-pause" hidden>
+      <div class="panel stack" style="margin:auto">
+        <h2 style="margin:0;text-align:center;font-size:28px">Pausa</h2>
+        <div class="sub" id="p-sub" style="text-align:center;color:var(--ink-dim)"></div>
+        <button class="btn" id="p-resume">Continuar</button>
+        <button class="btn ghost" id="p-restart">Reiniciar fase</button>
+        <button class="btn ghost" id="p-map">Voltar ao mapa</button>
+        <div class="row">
+          <button class="btn ghost small" id="p-music">Música</button>
+          <button class="btn ghost small" id="p-sfx">Efeitos</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="scr dim" id="scr-complete" hidden>
+      <div class="panel result" style="margin:auto">
+        <h2 id="r-title">Fase concluída!</h2>
+        <div class="sub" id="r-sub"></div>
+        <div class="statrow"><span>Tempo</span><span id="r-time"></span></div>
+        <div class="statrow"><span>Brasas</span><span id="r-coins"></span></div>
+        <div class="statrow"><span>Gemas</span><span class="gems" id="r-gems"></span></div>
+        <div class="statrow"><span>Maior combo</span><span id="r-combo"></span></div>
+        <div class="statrow"><span>Apagadas</span><span id="r-deaths"></span></div>
+        <div class="stack" style="margin-top:16px">
+          <button class="btn" id="r-next">Próxima fase</button>
+          <div class="row">
+            <button class="btn ghost" id="r-retry">Repetir</button>
+            <button class="btn ghost" id="r-map">Mapa</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="scr dim" id="scr-shop" hidden>
+      <div class="topbar">
+        <button class="icon-btn" id="s-back" aria-label="Voltar"><svg viewBox="0 0 10 10"><path d="M6.5 1 L2.5 5 L6.5 9 L7.6 7.9 L4.7 5 L7.6 2.1 Z"/></svg></button>
+        <h2>Loja de Chamas</h2>
+        <span class="chip wallet"><span class="ico-brasa"></span><span id="s-wallet">0</span></span>
+      </div>
+      <div class="skins" id="skins"></div>
+      <p class="note" style="width:min(100%,720px)">Junte brasas nas fases e derrotando inimigos em combo. Cada fase concluída deposita as brasas da partida na carteira.</p>
+    </section>
+
+    <section class="scr dim" id="scr-settings" hidden>
+      <div class="topbar">
+        <button class="icon-btn" id="o-back" aria-label="Voltar"><svg viewBox="0 0 10 10"><path d="M6.5 1 L2.5 5 L6.5 9 L7.6 7.9 L4.7 5 L7.6 2.1 Z"/></svg></button>
+        <h2>Ajustes</h2>
+      </div>
+      <div class="panel">
+        <div class="setting"><span>Música</span><button class="tog" id="o-music" aria-label="Música"></button></div>
+        <div class="setting"><span>Efeitos sonoros</span><button class="tog" id="o-sfx" aria-label="Efeitos sonoros"></button></div>
+        <div class="setting"><span>Vibração</span><button class="tog" id="o-vibrate" aria-label="Vibração"></button></div>
+        <div class="setting"><span>Cronômetro</span><button class="tog" id="o-timer" aria-label="Cronômetro"></button></div>
+        <div class="setting"><span>Escuridão</span><span class="seg" id="o-bright"><button data-v="1.12">Forte</button><button data-v="1">Normal</button><button data-v="0.78">Leve</button></span></div>
+        <div class="setting"><span>Botões</span><span class="seg" id="o-buttons"><button data-v="p">P</button><button data-v="m">M</button><button data-v="g">G</button></span></div>
+        <div style="margin-top:16px"><button class="btn danger small" id="o-reset">Apagar progresso</button></div>
+        <p class="note">Controles no teclado: ← → para andar, Espaço para pular, X para dash, Esc para pausar. Controles de videogame também funcionam.</p>
+      </div>
+    </section>
+
+    <section class="scr" id="scr-ending" hidden>
+      <div class="panel ending">
+        <h2>A luz voltou!</h2>
+        <p>A Grande Lanterna da Montanha Oca brilha outra vez, e as grutas lembram do seu nome: Faísca.</p>
+        <div class="statrow"><span>Gemas de chama</span><span id="e-gems"></span></div>
+        <div class="statrow"><span>Apagadas no caminho</span><span id="e-deaths"></span></div>
+        <div class="statrow"><span>Inimigos derrotados</span><span id="e-kills"></span></div>
+        <p class="note" id="e-note" style="text-align:center"></p>
+        <button class="btn" id="e-map" style="margin-top:10px">Voltar ao mapa</button>
+      </div>
+    </section>
+  </div>
+</div>
+<script type="module" src="js/main.js"></script>
+<!--/build:body-->
+</body>
+</html>

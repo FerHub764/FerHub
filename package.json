@@ -4,6 +4,9 @@
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.mjs",
-    "start": "python3 -m http.server 8080 -d site"
+    "start": "python3 -m http.server 8080 -d site",
+    "jogo:verificar": "node tools/jogo/solver.mjs",
+    "jogo:pagina": "node tools/jogo/build-artifact.mjs faisca.html",
+    "jogo:icones": "node tools/jogo/icons.mjs"
   }
 }

@@ -1,0 +1,40 @@
+// Paletas dos três mundos. "dark" é a opacidade da escuridão; a luz vem da
+// Faísca e dos objetos acesos.
+export const THEMES = [
+  {
+    name: 'Grutas de Âmbar',
+    bg: '#170c12', far: '#2b1720', mid: '#3b2028', near: '#24121a',
+    rock: { deep: '#24141a', base: '#5a3a2e', dark: '#432a21', light: '#7b5342', edge: '#120709',
+      top: '#6f8f3a', topL: '#aed15a', topD: '#47612a', hang: '#6b4a2f' },
+    spike: ['#efe6d6', '#a89c8c', '#4a3f38'],
+    wood: ['#8a5a33', '#c08550', '#4f2f18'],
+    water: ['rgba(26,112,150,0.78)', '#3fb4d8', '#bff4ff'],
+    ambient: 'rgb(14,6,12)', dark: 0.7,
+    mote: '#ffb46a', moteKind: 'ember',
+    music: 'w1',
+  },
+  {
+    name: 'Minas de Cristal',
+    bg: '#0a0b1e', far: '#15173a', mid: '#1d2050', near: '#0f1030',
+    rock: { deep: '#12132e', base: '#30346a', dark: '#24275a', light: '#4c529a', edge: '#06061a',
+      top: '#86cfff', topL: '#dff6ff', topD: '#4b86cc', hang: '#9fdcff' },
+    spike: ['#e9f6ff', '#93b3d6', '#2c3a60'],
+    wood: ['#6d6f86', '#9a9cb5', '#3a3b4f'],
+    water: ['rgba(40,90,170,0.75)', '#5fa8ff', '#dff0ff'],
+    ambient: 'rgb(5,5,20)', dark: 0.76,
+    mote: '#8fe0ff', moteKind: 'sparkle',
+    music: 'w2',
+  },
+  {
+    name: 'Poço das Marés',
+    bg: '#05131a', far: '#0b232b', mid: '#10323c', near: '#07191f',
+    rock: { deep: '#0a1c21', base: '#23484b', dark: '#173538', light: '#356768', edge: '#030c0f',
+      top: '#3fa38a', topL: '#88e6c0', topD: '#24705d', hang: '#3f8f74' },
+    spike: ['#dff7ef', '#89b8aa', '#20403a'],
+    wood: ['#5d4a3a', '#8a6f55', '#33271e'],
+    water: ['rgba(16,110,130,0.8)', '#2fd0d0', '#c6fff6'],
+    ambient: 'rgb(2,10,14)', dark: 0.8,
+    mote: '#7ff0e0', moteKind: 'bubble',
+    music: 'w3',
+  },
+];
