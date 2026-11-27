@@ -169,6 +169,29 @@ test('Modo Fuga: corre, perde as 3 vidas e mostra a distância', async () => {
   assert.deepEqual(errors, []);
 });
 
+test('instalável: service worker ativo, abre offline e a tela de Ajustes explica como instalar', async () => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, serviceWorkers: 'allow' });
+  await context.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.fulfill({ status: 200, body: '', contentType: 'text/css' }));
+  const page = await context.newPage();
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto(`${srv.url}/jogo/index.html`);
+  await page.waitForFunction(() => window.__faisca && window.__faisca.mode === 'title');
+  await page.waitForFunction(async () => {
+    const r = await navigator.serviceWorker.getRegistration();
+    return !!(r && r.active);
+  }, null, { timeout: 8000 });
+  await page.waitForTimeout(500);
+  await context.setOffline(true);
+  await page.reload();
+  await page.waitForFunction(() => window.__faisca && window.__faisca.mode === 'title');
+  assert.ok(await page.isVisible('#scr-title'), 'título abre sem internet');
+  await page.click('#t-settings');
+  await page.waitForSelector('#o-install');
+  assert.ok(await page.isVisible('#o-install-note'), 'mostra instruções de instalação');
+  await context.close();
+  assert.deepEqual(errors.filter((e) => !/ERR_FAILED|Failed to load/.test(e)), []);
+});
+
 test('todas as fases carregam e rodam alguns segundos sem erro', async () => {
   const { page, context } = await open();
   const ids = await page.evaluate(() => window.__faisca.LEVELS.map((l) => l.id));

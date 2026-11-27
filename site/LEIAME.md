@@ -39,3 +39,10 @@ Jogo de plataforma 2D para celular, publicado junto com o site em `/jogo/`. Voc�
 - **Verificador:** `npm run jogo:verificar` procura, com a física real do jogo, um caminho até a saída e até cada gema de todas as fases. Os testes também passam cada trecho do Modo Fuga pelo verificador. Rode depois de editar um mapa. `node tools/jogo/solver.mjs 2-3 --mapa` mostra onde a busca chegou.
 - **Testes:** `node --test tests/jogo.test.mjs` (física, progresso e fases) e `node --test tests/e2e/jogo.e2e.mjs` (navegador).
 - **Página única:** `npm run jogo:pagina` gera `faisca.html` com o jogo inteiro embutido num só arquivo.
+
+### Instalar a Faísca no celular
+
+1. Publique: faça merge da branch na `main` e confirme que o workflow **Publicar site (GitHub Pages)** ficou verde.
+2. Android (Chrome): abra o endereço do jogo, toque em ⋮ e depois em **Instalar app**. Ou abra **Ajustes → Instalar no celular → Instalar**.
+3. iPhone (Safari, não funciona no Chrome): abra o endereço, toque em **Compartilhar** e depois em **Adicionar à Tela de Início**.
+4. Depois de instalada, o jogo abre em tela cheia e funciona sem internet.

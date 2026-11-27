@@ -1,5 +1,5 @@
 // Guarda o jogo no aparelho para jogar sem internet depois da primeira visita.
-const CACHE = 'faisca-v2';
+const CACHE = 'faisca-v3';
 const CORE = [
   './',
   './index.html',
@@ -28,7 +28,12 @@ const CORE = [
 ];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(CORE)).then(() => self.skipWaiting()));
+  // Um arquivo que falhe não derruba a instalação inteira: cada um é guardado à parte.
+  e.waitUntil(
+    caches.open(CACHE)
+      .then((c) => Promise.allSettled(CORE.map((u) => fetch(u, { cache: 'reload' }).then((r) => (r.ok ? c.put(u, r) : null)))))
+      .then(() => self.skipWaiting()),
+  );
 });
 
 self.addEventListener('activate', (e) => {

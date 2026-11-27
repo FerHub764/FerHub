@@ -9,6 +9,8 @@ export function startServer(root) {
   const server = http.createServer((req, res) => {
     const url = decodeURIComponent(req.url.split('?')[0]);
     let file = path.join(root, url === '/' ? 'index.html' : url);
+    // pasta sem barra final vira index.html (como o GitHub Pages faz)
+    if (url.endsWith('/')) file = path.join(file, 'index.html');
     if (!file.startsWith(root)) { res.writeHead(403); return res.end(); }
     fs.readFile(file, (err, data) => {
       if (err) { res.writeHead(404); return res.end('not found'); }

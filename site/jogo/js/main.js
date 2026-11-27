@@ -519,6 +519,7 @@ function toShop(from) { shopFrom = from; mode = 'shop'; buildShop(); showScreen(
 // ---------- ajustes ----------
 let settingsFrom = 'title';
 function syncSettings() {
+  if (typeof syncInstall === 'function') syncInstall();
   const s = save.settings;
   for (const k of ['music', 'sfx', 'vibrate', 'timer', 'lefty', 'shake']) $(`o-${k}`).setAttribute('aria-pressed', String(!!s[k]));
   for (const b of $('o-bright').children) b.setAttribute('aria-pressed', String(Number(b.dataset.v) === s.brightness));
@@ -672,6 +673,36 @@ window.__faisca = { get game() { return game; }, get mode() { return mode; }, st
 const hot = window.claude && window.claude.hot;
 if (hot && hot.ready) hot.ready(boot); else boot();
 
-if ('serviceWorker' in navigator && location.protocol === 'https:' && !window.claude) {
+// Instalação: no Android o navegador oferece o instalador; no iPhone mostramos o passo a passo.
+let installEvt = null;
+const installBtn = $('o-install');
+const installNote = $('o-install-note');
+const isStandalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvt = e; syncInstall(); });
+window.addEventListener('appinstalled', () => { installEvt = null; toast('Faísca instalada!'); syncInstall(); });
+function syncInstall() {
+  if (isStandalone) { installBtn.textContent = 'Instalado ✓'; installBtn.disabled = true; installNote.hidden = true; return; }
+  installBtn.disabled = false;
+  if (installEvt) { installBtn.textContent = 'Instalar'; installNote.hidden = true; return; }
+  installBtn.textContent = 'Como instalar';
+  installNote.hidden = false;
+  installNote.innerHTML = isIOS
+    ? 'No iPhone, abra esta página no <b>Safari</b>, toque em <b>Compartilhar</b> (□↑) e depois em <b>Adicionar à Tela de Início</b>.'
+    : 'No Chrome do celular, toque nos <b>⋮</b> do canto e escolha <b>Instalar app</b> ou <b>Adicionar à tela inicial</b>.';
+}
+click('o-install', async () => {
+  if (installEvt) {
+    installEvt.prompt();
+    try { await installEvt.userChoice; } catch { /* ignorado */ }
+    installEvt = null;
+    syncInstall();
+    return;
+  }
+  installNote.hidden = !installNote.hidden;
+}, null);
+
+// O service worker vale em https e em localhost (teste no computador).
+if ('serviceWorker' in navigator && window.isSecureContext && !window.claude) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
