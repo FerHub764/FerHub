@@ -8,7 +8,7 @@ export function defaultSave() {
     wallet: 0,
     owned: ['classica'],
     skin: 'classica',
-    settings: { music: true, sfx: true, vibrate: true, brightness: 1, timer: true, buttons: 'm', lefty: false, shake: true },
+    settings: { music: true, sfx: true, vibrate: true, brightness: 1, timer: true, buttons: 'm', lefty: false, shake: true, landscape: true },
     stats: { deaths: 0, kills: 0, playFrames: 0, bestCombo: 0, earned: 0, pops: 0, flawless: false, allCoins: false },
     run: { best: 0, runs: 0, escaped: false },
     ach: {},

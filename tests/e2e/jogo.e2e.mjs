@@ -23,7 +23,14 @@ async function open(opts = {}, query = '') {
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   await page.goto(`${srv.url}/jogo/index.html${query}`);
   await page.waitForFunction(() => window.__faisca && window.__faisca.mode !== 'boot');
+  await pressStart(page);
   return { page, context };
+}
+// passa da tela de abertura ("Toque para começar") para o título
+async function pressStart(page) {
+  await page.waitForFunction(() => window.__faisca && window.__faisca.mode !== 'boot');
+  await page.evaluate(() => { if (window.__faisca.mode === 'splash') window.__faisca.pressStart(); });
+  await page.waitForFunction(() => window.__faisca.mode !== 'splash');
 }
 const shot = async (page, name) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recursive: true }); await page.screenshot({ path: path.join(SHOTS, `jogo-${name}.png`) }); } };
 
@@ -116,7 +123,7 @@ test('terminar a última fase mostra o final', async () => {
     localStorage.setItem('faisca.save.v1', JSON.stringify({ levels }));
   });
   await page.reload();
-  await page.waitForFunction(() => window.__faisca && window.__faisca.mode === 'title');
+  await pressStart(page);
   await page.evaluate(() => window.__faisca.startLevel(11));
   await page.waitForFunction(() => window.__faisca.game.state === 'play');
   await page.evaluate(() => { const g = window.__faisca.game; g.player.x = g.exit.x + 3; g.player.y = g.exit.y + 4; g.player.vy = 0; });
@@ -144,7 +151,7 @@ test('Modo Fuga: corre, perde as 3 vidas e mostra a distância', async () => {
   const { page, context } = await open();
   await page.evaluate(() => localStorage.setItem('faisca.save.v1', JSON.stringify({ levels: { '1-1': { done: true, gems: [false, false, false], bestTime: 3000 } } })));
   await page.reload();
-  await page.waitForFunction(() => window.__faisca && window.__faisca.mode === 'title');
+  await pressStart(page);
   await page.click('#t-run');
   await page.waitForFunction(() => window.__faisca.game && window.__faisca.game.isRun && window.__faisca.game.state === 'play');
   await page.keyboard.down('ArrowRight');
@@ -175,7 +182,7 @@ test('instalável: service worker ativo, abre offline e a tela de Ajustes explic
   const page = await context.newPage();
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(`${srv.url}/jogo/index.html`);
-  await page.waitForFunction(() => window.__faisca && window.__faisca.mode === 'title');
+  await pressStart(page);
   await page.waitForFunction(async () => {
     const r = await navigator.serviceWorker.getRegistration();
     return !!(r && r.active);
@@ -183,7 +190,7 @@ test('instalável: service worker ativo, abre offline e a tela de Ajustes explic
   await page.waitForTimeout(500);
   await context.setOffline(true);
   await page.reload();
-  await page.waitForFunction(() => window.__faisca && window.__faisca.mode === 'title');
+  await pressStart(page);
   assert.ok(await page.isVisible('#scr-title'), 'título abre sem internet');
   await page.click('#t-settings');
   await page.waitForSelector('#o-install');
@@ -205,10 +212,38 @@ test('todas as fases carregam e rodam alguns segundos sem erro', async () => {
   assert.deepEqual(errors, []);
 });
 
-test('celular em pé: console portátil sem botões sobrepostos e toque no PULO pula', async () => {
+test('abre na tela "Toque para começar" e o toque leva ao título', async () => {
+  const context = await browser.newContext({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
+  await context.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.fulfill({ status: 200, body: '', contentType: 'text/css' }));
+  const page = await context.newPage();
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto(`${srv.url}/jogo/index.html`);
+  await page.waitForSelector('#scr-splash:not([hidden])');
+  await page.touchscreen.tap(422, 200);
+  await page.waitForSelector('#scr-title:not([hidden])');
+  await context.close();
+  assert.deepEqual(errors, []);
+});
+
+test('opção "Sempre deitado" desligada: celular em pé vira console portátil', async () => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  await context.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.fulfill({ status: 200, body: '', contentType: 'text/css' }));
+  await context.addInitScript(() => { try { localStorage.setItem('faisca.save.v1', JSON.stringify({ settings: { landscape: false } })); } catch { /* ok */ } });
+  const page = await context.newPage();
+  await page.goto(`${srv.url}/jogo/index.html?fase=1-1`);
+  await page.waitForFunction(() => window.__faisca.game && window.__faisca.game.state === 'play');
+  const cls = await page.evaluate(() => document.getElementById('app').className);
+  assert.match(cls, /portrait/);
+  assert.doesNotMatch(cls, /\brot\b/);
+  await context.close();
+});
+
+test('celular em pé: o jogo gira e fica deitado, sem botões sobrepostos, e o toque no PULO pula', async () => {
   const { page, context } = await open({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 }, '?fase=1-1');
   await page.waitForFunction(() => window.__faisca.game && window.__faisca.game.state === 'play');
-  assert.ok(await page.evaluate(() => document.getElementById('app').classList.contains('portrait')));
+  const cls = await page.evaluate(() => document.getElementById('app').className);
+  assert.match(cls, /\brot\b/);
+  assert.match(cls, /landscape/);
   const boxes = await page.evaluate(() => ['b-left', 'b-right', 'b-dash', 'b-jump'].map((id) => {
     const r = document.getElementById(id).getBoundingClientRect();
     return { id, l: r.left, r: r.right, t: r.top, b: r.bottom };
@@ -238,6 +273,7 @@ test('loja mostra as 6 chamas e compra quando há brasas', async () => {
     localStorage.setItem('faisca.save.v1', JSON.stringify({ wallet: 500 }));
   });
   await page.reload();
+  await pressStart(page);
   await page.waitForSelector('#scr-title:not([hidden])');
   await page.click('#t-shop');
   await page.waitForSelector('#scr-shop:not([hidden])');
