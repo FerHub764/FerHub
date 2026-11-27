@@ -1,5 +1,5 @@
 // Guarda o jogo no aparelho para jogar sem internet depois da primeira visita.
-const CACHE = 'faisca-v3';
+const CACHE = 'faisca-v4';
 const CORE = [
   './',
   './index.html',

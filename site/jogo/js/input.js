@@ -72,7 +72,12 @@ export class Input {
           if (hit) pressed.add(hit);
         }
       }
-      for (const k of ['jump', 'dash']) if ((next[k] && !before[k]) || pressed.has(k)) this.latch[k] = true;
+      for (const k of ['jump', 'dash']) {
+        if ((next[k] && !before[k]) || pressed.has(k)) {
+          this.latch[k] = true;
+          if (this.onPress) this.onPress(k);
+        }
+      }
       this.touch = next;
       this.renderButtons();
     };
@@ -87,13 +92,23 @@ export class Input {
     window.addEventListener('mouseup', () => { if (mouseHit) { this.touch[mouseHit] = false; mouseHit = null; this.renderButtons(); } });
   }
 
+  // Com o celular em pé e o jogo girado 90°, converte coordenadas da tela
+  // para as coordenadas do jogo (deitado).
+  toLocal(x, y) { return this.rot ? [y, this.rot.W - x] : [x, y]; }
+  rectLocal(r) {
+    if (!this.rot) return r;
+    const W = this.rot.W;
+    return { left: r.top, right: r.bottom, top: W - r.right, bottom: W - r.left, width: r.height, height: r.width };
+  }
+
   rects() {
     const r = {};
-    for (const k of ['left', 'right', 'jump', 'dash']) r[k] = this.btn[k].getBoundingClientRect();
+    for (const k of ['left', 'right', 'jump', 'dash']) r[k] = this.rectLocal(this.btn[k].getBoundingClientRect());
     return r;
   }
 
   hitTest(x, y, strict = false) {
+    [x, y] = this.toLocal(x, y);
     const r = this.rects();
     const pad = strict ? 0 : 26;
     const inR = (b, m) => x >= b.left - m && x <= b.right + m && y >= b.top - m && y <= b.bottom + m;
@@ -108,7 +123,7 @@ export class Input {
     if (x >= dpadL - pad && x <= dpadR + pad && y >= dpadT - pad * 2 && y <= dpadB + pad) return x < mid ? 'left' : 'right';
     if (inR(r.jump, pad) || inR(r.dash, pad)) return dist(r.jump) <= dist(r.dash) ? 'jump' : 'dash';
     // Fora dos botões: metade esquerda move, metade direita age.
-    const padBox = this.padEl.getBoundingClientRect();
+    const padBox = this.rectLocal(this.padEl.getBoundingClientRect());
     if (y < padBox.top) return null;
     const half = padBox.left + padBox.width / 2;
     const dpadSide = (dpadL + dpadR) / 2 < half ? x < half : x >= half;

@@ -41,7 +41,7 @@ let isRun = false;
 let isTouch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
 
 // ---------- utilidades de interface ----------
-const screens = ['title', 'map', 'pause', 'complete', 'shop', 'settings', 'ending', 'ach'];
+const screens = ['splash', 'title', 'map', 'pause', 'complete', 'shop', 'settings', 'ending', 'ach'];
 function showScreen(name) {
   app.classList.toggle('playing', name === null || name === 'pause');
   for (const s of screens) $(`scr-${s}`).hidden = s !== name;
@@ -106,8 +106,24 @@ function keyName(k) {
 
 // ---------- layout ----------
 function layout() {
-  const W = window.innerWidth, H = window.innerHeight;
-  const portrait = H > W * 1.05;
+  let W = window.innerWidth, H = window.innerHeight;
+  // "Sempre deitado": com o celular em pé, o jogo inteiro gira 90° e continua em paisagem
+  const forceLand = isTouch && save.settings.landscape !== false;
+  const rot = forceLand && H > W * 1.05;
+  app.classList.toggle('rot', rot);
+  if (rot) {
+    app.style.width = `${H}px`; app.style.height = `${W}px`; app.style.left = `${W}px`;
+    input.rot = { W };
+    [W, H] = [H, W];
+  } else {
+    app.style.width = app.style.height = app.style.left = '';
+    input.rot = null;
+  }
+  const portrait = !forceLand && H > W * 1.05;
+  // classes de "tela baixa" calculadas com o tamanho já girado (media queries veem a tela física)
+  app.classList.toggle('short', H < 460);
+  app.classList.toggle('short-xs', H < 420);
+  app.classList.toggle('lowland', W > H && H < 520);
   const handheld = portrait && isTouch;
   app.classList.toggle('portrait', handheld);
   app.classList.toggle('landscape', !handheld);
@@ -122,13 +138,14 @@ function layout() {
     const padH = Math.max(230, Math.min(inner * 0.4, 330));
     app.style.setProperty('--stage-h', `${Math.round(inner - padH)}px`);
   }
-  const r = stage.getBoundingClientRect();
-  renderer.resize(r.width, r.height, Math.min(window.devicePixelRatio || 1, 3));
+  // tamanho de layout (não muda com o giro da tela)
+  renderer.resize(stage.clientWidth, stage.clientHeight, Math.min(window.devicePixelRatio || 1, 3));
   const cur = game || scene;
   if (cur) cur.setView(renderer.vw, renderer.vh);
   if (scene && scene !== cur) scene.setView(renderer.vw, renderer.vh);
 }
 window.addEventListener('resize', layout);
+document.addEventListener('fullscreenchange', () => setTimeout(layout, 100));
 window.addEventListener('orientationchange', () => setTimeout(layout, 120));
 
 // ---------- HUD ----------
@@ -187,16 +204,45 @@ function makeScene(ending = false) {
 }
 
 // Faísca grande na tela de título
-const heroCv = $('t-hero');
-const heroCtx = heroCv.getContext('2d');
+const heroCtxs = [$('t-hero').getContext('2d'), $('sp-hero').getContext('2d')];
 let heroFrames = null;
 let heroSkin = '';
 function drawHero(t) {
   if (heroSkin !== save.skin) { heroFrames = buildPlayerFrames(SKINS.find((s) => s.id === save.skin) || SKINS[0]); heroSkin = save.skin; }
   const fr = heroFrames.idle[((t / 10) | 0) % 4];
-  heroCtx.clearRect(0, 0, 20, 20);
-  heroCtx.drawImage(fr.img, 0, 0);
+  for (const c of heroCtxs) { c.clearRect(0, 0, 20, 20); c.drawImage(fr.img, 0, 0); }
 }
+
+// ---------- abertura e orientação ----------
+// Tela cheia e trava em paisagem onde o navegador permite (Android); no iPhone vale o giro por CSS.
+async function goLandscape() {
+  if (!isTouch || save.settings.landscape === false) return;
+  const d = document.documentElement;
+  try { if (!document.fullscreenElement && d.requestFullscreen) await d.requestFullscreen({ navigationUI: 'hide' }); } catch { /* sem tela cheia aqui */ }
+  try { if (screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape'); } catch { /* sem trava de orientação */ }
+  setTimeout(layout, 150);
+}
+
+function toSplash() {
+  mode = 'splash';
+  input.enabled = false;
+  $('hud').hidden = true;
+  if (!scene) scene = makeScene();
+  renderer.prepare(scene);
+  showScreen('splash');
+  audio.play('title');
+}
+let starting = false;
+async function pressStart() {
+  if (mode !== 'splash' || starting) return;
+  starting = true;
+  audio.unlock();
+  audio.sfx('ui');
+  goLandscape();
+  toTitle();
+  starting = false;
+}
+$('scr-splash').addEventListener('click', pressStart);
 
 function toTitle() {
   game = null;
@@ -295,6 +341,7 @@ hooks.combo = (n) => {
 
 function startLevel(i) {
   isRun = false;
+  goLandscape();
   levelIndex = i;
   const def = LEVELS[i];
   const rec = levelRec(save, def.id);
@@ -317,6 +364,7 @@ function startLevel(i) {
 function startRun() {
   if (!levelRec(save, '1-1').done) { toast('Termine a fase 1-1 para liberar o Modo Fuga'); audio.sfx('nope'); return; }
   isRun = true;
+  goLandscape();
   const def = makeRun((Math.random() * 1e9) | 0);
   game = new RunGame(def, { skin: save.skin, hooks });
   if (save.run.best >= 20) { game.recordM = save.run.best; game.recordX = game.startX + save.run.best * 16; }
@@ -521,7 +569,7 @@ let settingsFrom = 'title';
 function syncSettings() {
   if (typeof syncInstall === 'function') syncInstall();
   const s = save.settings;
-  for (const k of ['music', 'sfx', 'vibrate', 'timer', 'lefty', 'shake']) $(`o-${k}`).setAttribute('aria-pressed', String(!!s[k]));
+  for (const k of ['music', 'sfx', 'vibrate', 'timer', 'lefty', 'shake', 'landscape']) $(`o-${k}`).setAttribute('aria-pressed', String(!!s[k]));
   for (const b of $('o-bright').children) b.setAttribute('aria-pressed', String(Number(b.dataset.v) === s.brightness));
   for (const b of $('o-buttons').children) b.setAttribute('aria-pressed', String(b.dataset.v === s.buttons));
 }
@@ -532,11 +580,13 @@ function setSetting(k, v) {
   if (k === 'sfx') audio.setSfx(v);
   if (k === 'brightness') renderer.brightness = v;
   if (k === 'shake') renderer.shakeOn = v;
-  if (k === 'buttons' || k === 'lefty') layout();
+  if (k === 'buttons' || k === 'lefty' || k === 'landscape') layout();
+  if (k === 'landscape' && v) goLandscape();
+  if (k === 'landscape' && !v) { try { if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch { /* ok */ } }
   writeSave(save);
   syncSettings();
 }
-for (const k of ['music', 'sfx', 'vibrate', 'timer', 'lefty', 'shake']) click(`o-${k}`, () => setSetting(k, !save.settings[k]));
+for (const k of ['music', 'sfx', 'vibrate', 'timer', 'lefty', 'shake', 'landscape']) click(`o-${k}`, () => setSetting(k, !save.settings[k]));
 for (const b of $('o-bright').children) b.addEventListener('click', () => { audio.sfx('ui'); setSetting('brightness', Number(b.dataset.v)); });
 for (const b of $('o-buttons').children) b.addEventListener('click', () => { audio.sfx('ui'); setSetting('buttons', b.dataset.v); });
 let resetArmed = false;
@@ -585,6 +635,8 @@ click('r-retry', () => startLevel(levelIndex));
 click('r-map', () => (isRun ? toTitle() : toMap()), 'uiBack');
 click('e-map', () => { scene = makeScene(); toMap(); });
 
+// vibração curta ao apertar pulo/dash na tela (sensação de botão físico)
+input.onPress = () => vibrate(6);
 input.onPause = () => {
   audio.unlock();
   if (mode === 'play') pause();
@@ -593,6 +645,7 @@ input.onPause = () => {
 input.onAnyKey = (e) => {
   audio.unlock();
   if (isTouch && !e.repeat) { isTouch = false; layout(); }
+  if (mode === 'splash' && !e.repeat) { pressStart(); return; }
   if (e.code === 'Enter' && mode === 'title' && document.activeElement === document.body) toMap();
   if (e.code === 'Escape' && (mode === 'shop' || mode === 'settings' || mode === 'ach')) toTitle();
 };
@@ -638,7 +691,7 @@ function frame(now) {
     if (n >= 5) acc = 0;
   }
   renderer.draw(cur);
-  if (mode === 'title') drawHero(cur.frame);
+  if (mode === 'title' || mode === 'splash') drawHero(cur.frame);
   syncDashButton();
   if (game && ++hudTick % 6 === 0) {
     if (isRun) hud.timer.textContent = `${game.distance} m`;
@@ -663,12 +716,12 @@ function boot() {
   const m = /[?&]fase=([\d-]+)/.exec(location.search);
   const idx = m ? LEVELS.findIndex((l) => l.id === m[1]) : -1;
   if (idx >= 0) startLevel(idx);
-  else toTitle();
+  else toSplash();
   requestAnimationFrame((t) => { last = t; frame(t); });
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => layout());
 }
 
-window.__faisca = { get game() { return game; }, get mode() { return mode; }, startLevel, startRun, LEVELS };
+window.__faisca = { get game() { return game; }, get mode() { return mode; }, startLevel, startRun, pressStart, LEVELS };
 
 const hot = window.claude && window.claude.hot;
 if (hot && hot.ready) hot.ready(boot); else boot();
