@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Faísca</title>
+<meta name="description" content="Faísca: um jogo de plataforma para celular. Uma pequena brasa atravessa cavernas escuras com dash, pulo na parede e combos.">
+<meta name="theme-color" content="#0d0710">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Faísca">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<!--build:head-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Tela única de jogo, tema escuro fixo: a caverna é sempre escura. */
+:root {
+  --night: #0d0710;
+  --panel: #1c1119;
+  --panel-2: #2a1922;
+  --line: #4b2c33;
+  --ink: #fff2dc;
+  --ink-dim: #c8ae95;
+  --ember: #ffb45a;
+  --ember-deep: #e2541c;
+  --ruby: #ff5a6e;
+  --cool: #7cc8ff;
+  --leaf: #a6d45a;
+  --shadow: #07030a;
+  --f-display: 'Pixelify Sans', ui-monospace, 'Courier New', monospace;
+  --f-body: 'Pixelify Sans', ui-monospace, 'Courier New', monospace;
+  --btn: 64px;
+  color-scheme: dark;
+}
+html, body { height: 100%; margin: 0; background: var(--night); color: var(--ink); overflow: hidden; }
+body { font-family: var(--f-body); -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
+button { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
+
+#app {
+  position: fixed; inset: 0;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+  display: flex; flex-direction: column;
+  background: radial-gradient(120% 80% at 50% 0%, #26121d 0%, var(--night) 60%);
+}
+#stage { position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; background: #000; }
+#screen { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
+
+/* ---------- HUD ---------- */
+#hud { position: absolute; inset: 0; pointer-events: none; font-family: var(--f-display); }
+.hud-top { position: absolute; top: 8px; left: 10px; right: 10px; display: flex; align-items: center; gap: 12px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 7px; margin: 2px; background: rgba(20, 10, 17, 0.78); border: 0; border-radius: 0; box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.06), 0 -2px 0 rgba(0, 0, 0, 0.6), 0 2px 0 rgba(0, 0, 0, 0.6), -2px 0 0 rgba(0, 0, 0, 0.6), 2px 0 0 rgba(0, 0, 0, 0.6); font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; text-shadow: 0 2px 0 var(--shadow); }
+.ico-brasa { width: 12px; height: 12px; background: radial-gradient(circle at 40% 35%, #fff4c8 0 18%, #ffb23a 20% 55%, #e0631e 57% 100%); border-radius: 50%; box-shadow: 0 0 8px #ff8a2a; }
+.gems { display: inline-flex; gap: 4px; }
+.gem { width: 12px; height: 12px; transform: rotate(45deg) scale(0.8); background: #2a2230; border: 2px solid #4a3a4e; }
+.gem.on { background: linear-gradient(135deg, #ffe0e0, #ff6f7d 40%, #8a0f2d); border-color: #3d0613; box-shadow: 0 0 10px #ff4a6a; }
+.gem.had { background: linear-gradient(135deg, #d6e4ff, #7088b0 50%, #4b5a7a); border-color: #232a3d; }
+#timer { margin-left: auto; }
+.icon-btn { pointer-events: auto; width: 38px; height: 38px; margin: 2px 2px 6px; display: grid; place-items: center; background: #2e1b26; border: 0; border-radius: 0; cursor: pointer; padding: 0;
+  box-shadow: inset 0 2px 0 #4e3140, inset 0 -3px 0 #1b0d15, 0 -2px 0 #0b0509, 0 2px 0 #0b0509, -2px 0 0 #0b0509, 2px 0 0 #0b0509, 0 5px 0 #0b0509; }
+.icon-btn:active { transform: translateY(3px); box-shadow: inset 0 2px 0 #1b0d15, 0 -2px 0 #0b0509, 0 2px 0 #0b0509, -2px 0 0 #0b0509, 2px 0 0 #0b0509; }
+.icon-btn svg { width: 18px; height: 18px; fill: var(--ink); }
+#combo { position: absolute; top: 56px; left: 0; right: 0; text-align: center; font-size: 30px; font-weight: 700; color: var(--ember); text-shadow: 0 3px 0 #6a1d08, 0 0 18px rgba(255, 140, 40, 0.8); opacity: 0; transform: scale(0.6); transition: opacity 0.25s, transform 0.25s; letter-spacing: 1px; }
+#combo.show { opacity: 1; transform: scale(1); }
+#combo.bump { animation: bump 0.22s ease-out; }
+#combo small { display: block; font-size: 14px; color: var(--ink); letter-spacing: 3px; text-shadow: 0 2px 0 var(--shadow); }
+@keyframes bump { 0% { transform: scale(1.35); } 100% { transform: scale(1); } }
+#banner { position: absolute; left: 0; right: 0; top: 34%; text-align: center; pointer-events: none; opacity: 0; transition: opacity 0.4s; }
+#banner.show { opacity: 1; }
+#banner .n { font-size: 16px; letter-spacing: 6px; color: var(--ember); text-shadow: 0 2px 0 var(--shadow); }
+#banner .t { font-size: 34px; font-weight: 700; text-shadow: 0 3px 0 var(--shadow), 0 0 24px rgba(255, 160, 60, 0.45); }
+#hint { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%) translateY(8px); max-width: min(92%, 460px); padding: 10px 14px; background: rgba(20, 11, 18, 0.9); border: 2px solid var(--line); border-radius: 6px; font-size: 16px; line-height: 1.35; text-align: center; opacity: 0; transition: opacity 0.2s, transform 0.2s; box-shadow: 0 4px 0 var(--shadow); pointer-events: none; }
+#hint.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+#hint b { color: var(--ember); font-weight: 700; }
+.landscape.touch #hint { bottom: auto; top: 58px; }
+
+/* ---------- controles de toque ---------- */
+#pad { display: none; touch-action: none; -webkit-user-select: none; user-select: none; }
+.touch #pad { display: block; }
+.landscape:not(.playing) #pad { display: none !important; }
+.portrait:not(.playing) #pad .dpad, .portrait:not(.playing) #pad .acts, .portrait:not(.playing) #pad .pill { visibility: hidden; }
+.pbtn { position: absolute; box-sizing: border-box; width: var(--btn); height: var(--btn); border-radius: 50%; display: grid; place-items: center; transition: transform 0.06s, box-shadow 0.06s, background 0.06s, filter 0.2s; }
+.pbtn svg { width: 46%; height: 46%; shape-rendering: crispEdges; overflow: visible; }
+.pbtn .lbl { position: absolute; left: 50%; transform: translateX(-50%); bottom: -20px; font-size: 11px; font-weight: 700; letter-spacing: 3px; white-space: nowrap; pointer-events: none; }
+.act-jump { width: calc(var(--btn) * 1.2); height: calc(var(--btn) * 1.2); }
+.ico-main { fill: #fff3dc; }
+.ico-core { fill: #ffe7a3; }
+.ico-hot { fill: #ff8a2a; }
+.ico-dim { fill: rgba(255, 243, 220, 0.45); }
+
+/* deitado: botões de vidro por cima da tela */
+.landscape.touch #pad { position: absolute; left: 0; right: 0; bottom: 0; top: 30%; z-index: 5; pointer-events: auto; }
+.landscape #pad .dpad { position: absolute; left: calc(20px + env(safe-area-inset-left, 0px)); bottom: calc(22px + env(safe-area-inset-bottom, 0px)); width: calc(var(--btn) * 2.3); height: var(--btn); border-radius: 999px;
+  background: linear-gradient(180deg, rgba(40, 22, 34, 0.55), rgba(12, 6, 12, 0.62)); box-shadow: 0 0 0 2px rgba(255, 214, 160, 0.38), 0 0 0 6px rgba(0, 0, 0, 0.22), 0 8px 18px rgba(0, 0, 0, 0.4), inset 0 2px 0 rgba(255, 255, 255, 0.08); }
+.landscape .dpad::after { content: ''; position: absolute; left: 50%; top: 18%; bottom: 18%; width: 2px; background: rgba(255, 214, 160, 0.22); }
+.landscape .b-left, .landscape .b-right { top: 0; width: 50%; height: 100%; border-radius: 999px 0 0 999px; }
+.landscape .b-left { left: 0; }
+.landscape .b-right { right: 0; border-radius: 0 999px 999px 0; }
+.landscape .b-left svg, .landscape .b-right svg { width: 40%; height: 40%; }
+.landscape .b-left.on, .landscape .b-right.on { background: radial-gradient(circle at 50% 55%, rgba(255, 170, 80, 0.55), rgba(255, 110, 40, 0.18) 70%); }
+.landscape .b-left.on svg, .landscape .b-right.on svg { filter: drop-shadow(0 0 6px #ffb45a); }
+.landscape #pad .acts { position: absolute; right: calc(20px + env(safe-area-inset-right, 0px)); bottom: calc(22px + env(safe-area-inset-bottom, 0px)); width: calc(var(--btn) * 2.4); height: calc(var(--btn) * 1.85); }
+.landscape .act-dash { left: 0; bottom: 4px; }
+.landscape .act-jump { right: 0; top: 0; }
+.landscape .acts .pbtn { background: radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.03) 55%), rgba(18, 9, 16, 0.5);
+  box-shadow: 0 0 0 2px var(--rim), 0 0 0 6px rgba(0, 0, 0, 0.22), 0 8px 18px rgba(0, 0, 0, 0.4), inset 0 -5px 0 rgba(0, 0, 0, 0.3), inset 0 2px 0 rgba(255, 255, 255, 0.14); }
+.landscape .act-jump { --rim: rgba(255, 196, 120, 0.75); }
+.landscape .act-dash { --rim: rgba(255, 150, 70, 0.7); }
+.landscape .acts .pbtn.on { transform: scale(0.92); background: radial-gradient(circle at 50% 35%, #ffd79a, #ff8a2a 55%, #b4350c); box-shadow: 0 0 0 2px #ffe0a8, 0 0 22px 4px rgba(255, 130, 40, 0.65), inset 0 3px 0 rgba(255, 255, 255, 0.4); }
+.landscape .pbtn .lbl { color: rgba(255, 236, 210, 0.75); text-shadow: 0 1px 0 #000; }
+
+/* anel de carga do dash */
+.act-dash::before { content: ''; position: absolute; inset: -7px; border-radius: 50%; border: 3px solid #ffb45a; box-shadow: 0 0 12px rgba(255, 140, 40, 0.7), inset 0 0 8px rgba(255, 140, 40, 0.5); transition: opacity 0.15s, border-color 0.15s; pointer-events: none; }
+.act-dash.spent::before { opacity: 0.18; border-color: #8a7f86; box-shadow: none; }
+.act-dash.spent svg { filter: grayscale(1) brightness(0.65); }
+.act-dash.ready::before { animation: ready 0.4s ease-out; }
+@keyframes ready { 0% { transform: scale(1.35); opacity: 0; } 60% { opacity: 1; } 100% { transform: scale(1); } }
+
+/* em pé: console de bolso, tela em cima e botões embaixo */
+.portrait.touch { background:
+  radial-gradient(120% 60% at 50% 100%, rgba(255, 120, 50, 0.08), transparent 60%),
+  repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.012) 0 2px, transparent 2px 5px),
+  linear-gradient(180deg, #3a1c2b 0%, #2a1320 45%, #1b0b14 100%); }
+.portrait #stage { flex: 0 0 auto; height: var(--stage-h, 60%); margin: 10px 12px 0; border-radius: 6px 6px 26px 6px;
+  box-shadow: 0 0 0 3px #050205, 0 0 0 9px #140910, 0 0 0 11px #4a2838, 0 12px 22px rgba(0, 0, 0, 0.55); }
+.portrait.touch #pad { position: relative; flex: 1 1 auto; min-height: 0; margin-top: 12px; }
+.console-deco { position: absolute; inset: 0; pointer-events: none; }
+.landscape .console-deco { display: none; }
+.install-row .btn { width: auto; min-width: 130px; margin: 0 3px 8px; }
+.portrait .console-deco .brand { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; font-family: var(--f-display); font-size: 15px; font-weight: 700; letter-spacing: 5px; color: #7a4a5c; text-shadow: 0 -1px 0 #12070d, 0 1px 0 rgba(255, 255, 255, 0.08); white-space: nowrap; }
+.console-deco .brand small { font-size: 10px; letter-spacing: 4px; color: #5c3646; }
+.console-deco .led { width: 8px; height: 8px; border-radius: 50%; background: #4a1a12; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2); }
+.playing .console-deco .led { background: #ff6a2a; box-shadow: 0 0 8px #ff6a2a, 0 0 2px #ffd0a0; animation: led 2.6s ease-in-out infinite; }
+@keyframes led { 50% { opacity: 0.6; } }
+.console-deco .grill { position: absolute; right: 7%; bottom: 10px; width: 58px; height: 34px; background-image: radial-gradient(circle, #0d050a 0 2.2px, transparent 2.7px); background-size: 9px 9px; transform: rotate(-24deg); opacity: 0.9; }
+.portrait #pad .dpad { position: absolute; left: 6%; top: 52%; transform: translateY(-50%); width: calc(var(--btn) * 2.25); height: calc(var(--btn) * 1.12); border-radius: 999px;
+  background: linear-gradient(180deg, #120810, #1d0f18); box-shadow: inset 0 4px 6px rgba(0, 0, 0, 0.8), 0 1px 0 rgba(255, 255, 255, 0.07); }
+.portrait .b-left, .portrait .b-right { top: 7%; height: 86%; width: 46%; border-radius: 999px 10px 10px 999px;
+  background: linear-gradient(180deg, #4a3442 0%, #2e1d29 60%, #241620 100%); box-shadow: 0 5px 0 #0c050a, inset 0 2px 0 rgba(255, 255, 255, 0.12), inset 0 -3px 0 rgba(0, 0, 0, 0.3); }
+.portrait .b-left { left: 3%; }
+.portrait .b-right { right: 3%; border-radius: 10px 999px 999px 10px; }
+.portrait .b-left.on, .portrait .b-right.on { transform: translateY(4px); box-shadow: 0 1px 0 #0c050a, inset 0 2px 6px rgba(0, 0, 0, 0.5), 0 0 16px rgba(255, 130, 40, 0.35); }
+.portrait .b-left.on svg, .portrait .b-right.on svg { filter: drop-shadow(0 0 5px #ffb45a); }
+.portrait #pad .acts { position: absolute; right: 5%; top: 50%; transform: translateY(-50%); width: calc(var(--btn) * 2.4); height: calc(var(--btn) * 2.3); }
+.portrait .act-dash { left: 0; bottom: 8%; }
+.portrait .act-jump { right: 0; top: 2%; }
+.portrait .acts .pbtn { background: radial-gradient(circle at 38% 28%, #ffd8a0 0, #ffa04a 22%, #ee6420 55%, #a8320c 100%);
+  box-shadow: 0 6px 0 #4a1206, 0 0 0 7px #120810, 0 0 0 9px #4a2838, inset 0 -6px 0 rgba(90, 20, 0, 0.35), inset 0 3px 0 rgba(255, 255, 255, 0.35); }
+.portrait .acts .pbtn.on { transform: translateY(5px); box-shadow: 0 1px 0 #4a1206, 0 0 0 7px #120810, 0 0 0 9px #4a2838, 0 0 26px 6px rgba(255, 120, 40, 0.55), inset 0 4px 8px rgba(120, 30, 0, 0.5); }
+.portrait .act-dash { background: radial-gradient(circle at 38% 28%, #ffe9b0 0, #ffc04a 22%, #f08a1a 55%, #a8520c 100%) !important; }
+.portrait .act-dash::before { inset: -11px; }
+.landscape .act-dash::before { inset: -4px; border-width: 2px; }
+.portrait .pbtn .lbl { bottom: -30px; color: #8a5a6c; text-shadow: 0 -1px 0 #12070d; }
+.pill { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%) rotate(-24deg); display: flex; flex-direction: column; align-items: center; gap: 4px; pointer-events: auto; background: none; border: 0; padding: 4px; cursor: pointer; }
+.pill i { display: block; width: 42px; height: 12px; border-radius: 8px; background: linear-gradient(180deg, #2e1d29, #1a0e16); box-shadow: 0 3px 0 #0c050a, inset 0 1px 0 rgba(255, 255, 255, 0.1); }
+.pill:active i { transform: translateY(2px); box-shadow: 0 1px 0 #0c050a; }
+.pill span { font-size: 10px; letter-spacing: 3px; color: #7a4a5c; }
+.landscape .pill { display: none; }
+
+/* canhoto: lados trocados */
+.lefty.landscape #pad .dpad { left: auto; right: calc(20px + env(safe-area-inset-right, 0px)); }
+.lefty.landscape #pad .acts { right: auto; left: calc(20px + env(safe-area-inset-left, 0px)); }
+.lefty.landscape .act-dash { left: auto; right: 0; }
+.lefty.landscape .act-jump { right: auto; left: 0; }
+.lefty.portrait #pad .dpad { left: auto; right: 6%; }
+.lefty.portrait #pad .acts { right: auto; left: 5%; }
+.lefty.portrait .act-dash { left: auto; right: 0; }
+.lefty.portrait .act-jump { right: auto; left: 0; }
+.lefty .console-deco .grill { right: auto; left: 7%; transform: rotate(24deg); }
+
+/* ---------- telas ---------- */
+#screens { position: absolute; inset: 0; z-index: 10; pointer-events: none; }
+.scr { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; pointer-events: auto; overflow-y: auto; padding: calc(14px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) calc(18px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); box-sizing: border-box; animation: fadein 0.25s ease-out; }
+.scr.dim { background: rgba(8, 4, 10, 0.72); }
+@keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+.panel { width: min(calc(100% - 6px), 440px); margin: 3px; background: var(--panel); border: 0; border-radius: 0; padding: 18px; box-sizing: border-box;
+  box-shadow: inset 0 0 0 2px #3a2330, inset 0 4px 0 rgba(255, 255, 255, 0.05), 0 -3px 0 #0b0509, 0 3px 0 #0b0509, -3px 0 0 #0b0509, 3px 0 0 #0b0509, 0 10px 0 rgba(0, 0, 0, 0.35); }
+/* botão em pixel art: contorno com cantos recortados, brilho em cima, sombra embaixo e um degrau de profundidade */
+.btn { --face: #ffa548; --hi: #ffd391; --lo: #df631f; --out: #3a0d07; --depth: #8a2a0a; --txt: #2a0b03;
+  position: relative; display: flex; align-items: center; justify-content: center; gap: 8px; width: calc(100% - 6px); min-height: 50px; margin: 3px 3px 10px; padding: 10px 16px 12px; box-sizing: border-box;
+  border: 0; border-radius: 0; background: var(--face); color: var(--txt); font-size: 20px; font-weight: 700; letter-spacing: 1px; cursor: pointer; text-shadow: 0 1px 0 var(--hi);
+  box-shadow: inset 0 3px 0 var(--hi), inset 0 -5px 0 var(--lo),
+    0 -3px 0 var(--out), 0 3px 0 var(--out), -3px 0 0 var(--out), 3px 0 0 var(--out),
+    0 7px 0 var(--depth), -3px 7px 0 var(--out), 3px 7px 0 var(--out), 0 10px 0 var(--out);
+  transition: transform 0.05s; }
+.btn:hover:not(:disabled) { filter: brightness(1.06); }
+.btn:active:not(:disabled) { transform: translateY(5px);
+  box-shadow: inset 0 3px 0 var(--lo), inset 0 -2px 0 var(--lo), 0 -3px 0 var(--out), 0 3px 0 var(--out), -3px 0 0 var(--out), 3px 0 0 var(--out), 0 5px 0 var(--out); }
+.btn.ghost { --face: #3a2230; --hi: #5a3747; --lo: #26141e; --out: #0b0509; --depth: #180b12; --txt: var(--ink); text-shadow: 0 2px 0 #0b0509; }
+.btn.danger { --face: #ff6f7d; --hi: #ffb3bb; --lo: #c63448; --out: #3a0510; --depth: #7a1020; --txt: #2a0308; }
+.btn.small { min-height: 42px; font-size: 16px; padding: 8px 12px 10px; }
+.btn:disabled { filter: grayscale(0.85) brightness(0.6); cursor: default; }
+.btn:focus-visible, .lvl:focus-visible { outline: 3px solid var(--cool); outline-offset: 6px; }
+.icon-btn:focus-visible, .seg button:focus-visible, .tog:focus-visible { outline: 3px solid var(--cool); outline-offset: 3px; }
+.stack { display: flex; flex-direction: column; gap: 14px; }
+.row { display: flex; gap: 10px; }
+.row > * { flex: 1 1 0; min-width: 0; }
+
+/* título */
+#scr-title { justify-content: center; gap: 22px; background: linear-gradient(180deg, rgba(13, 7, 16, 0) 30%, rgba(13, 7, 16, 0.75) 100%); }
+.logo { text-align: center; margin-top: auto; }
+.logo canvas { display: block; width: 80px; height: 80px; margin: 0 auto 4px; image-rendering: pixelated; filter: drop-shadow(0 0 16px rgba(255, 150, 50, 0.85)); animation: bob 2.4s ease-in-out infinite; }
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@media (max-height: 420px) { .logo canvas { width: 56px; height: 56px; } .logo h1 { font-size: clamp(44px, 12vw, 84px); } #scr-title { gap: 14px; } }
+.logo h1 { margin: 0; font-family: var(--f-display); font-size: clamp(56px, 16vw, 112px); line-height: 0.9; font-weight: 700; letter-spacing: 4px; color: #ffe3b0; text-shadow: 0 4px 0 #a8380f, 0 8px 0 #4a1205, 0 0 30px rgba(255, 140, 40, 0.75), 0 0 80px rgba(255, 100, 20, 0.45); animation: flicker 3.2s infinite; }
+.logo p { margin: 12px 0 0; font-size: 17px; letter-spacing: 3px; color: var(--ink-dim); text-shadow: 0 2px 0 var(--shadow); }
+@keyframes flicker { 0%, 100% { opacity: 1; } 46% { opacity: 1; } 48% { opacity: 0.82; } 50% { opacity: 1; } 72% { opacity: 0.93; } 74% { opacity: 1; } }
+.title-menu { width: min(100%, 320px); margin-bottom: auto; }
+.title-foot { display: flex; gap: 10px; justify-content: center; }
+.corner { position: absolute; top: calc(10px + env(safe-area-inset-top, 0px)); right: calc(10px + env(safe-area-inset-right, 0px)); display: flex; gap: 8px; }
+
+/* mapa */
+.topbar { width: min(100%, 720px); display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.topbar h2 { margin: 0 auto 0 4px; font-size: 24px; text-shadow: 0 2px 0 var(--shadow); }
+.worlds { width: min(100%, 720px); display: flex; flex-direction: column; gap: 16px; }
+.world { position: relative; isolation: isolate; margin: 3px; padding: 14px; box-shadow: 0 -3px 0 #0b0509, 0 3px 0 #0b0509, -3px 0 0 #0b0509, 3px 0 0 #0b0509, 0 10px 0 rgba(0, 0, 0, 0.35), inset 0 0 0 2px color-mix(in srgb, var(--wacc) 30%, transparent); }
+.world::before { content: ''; position: absolute; inset: 0; background: var(--wbg); opacity: 0.95; z-index: -1; }
+.world header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
+.world h3 { margin: 0; font-size: 20px; text-shadow: 0 2px 0 var(--shadow); }
+.world .wnum { font-size: 13px; letter-spacing: 3px; color: var(--wacc); }
+.world .wgems { margin-left: auto; font-size: 15px; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+.levels { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.lvl { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 4px 9px; margin: 2px 2px 6px; background: rgba(10, 5, 12, 0.6); border: 0; border-radius: 0; cursor: pointer; min-width: 0;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.08), inset 0 -3px 0 rgba(0, 0, 0, 0.35), 0 -2px 0 #0b0509, 0 2px 0 #0b0509, -2px 0 0 #0b0509, 2px 0 0 #0b0509, 0 6px 0 rgba(0, 0, 0, 0.5); }
+.lvl:active { transform: translateY(3px); box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.3), 0 -2px 0 #0b0509, 0 2px 0 #0b0509, -2px 0 0 #0b0509, 2px 0 0 #0b0509; }
+.lvl .ln { font-size: 22px; font-weight: 700; color: var(--wacc); text-shadow: 0 2px 0 var(--shadow); }
+.lvl .lname { font-size: 12px; line-height: 1.2; color: var(--ink-dim); text-align: center; min-height: 2.4em; overflow-wrap: anywhere; }
+.lvl .gems .gem { width: 8px; height: 8px; border-width: 1px; }
+.lvl .lt { font-size: 11px; color: var(--ink-dim); font-variant-numeric: tabular-nums; min-height: 1.2em; }
+.lvl.done { background: color-mix(in srgb, var(--wacc) 14%, rgba(10, 5, 12, 0.6)); }
+.lvl.locked { cursor: default; opacity: 0.45; }
+.lvl .lock { width: 20px; height: 22px; fill: var(--ink-dim); }
+.lvl.next { animation: pulse 1.4s infinite; }
+@keyframes pulse { 0%, 100% { box-shadow: 0 4px 0 rgba(0, 0, 0, 0.45), 0 0 0 0 color-mix(in srgb, var(--wacc) 60%, transparent); } 50% { box-shadow: 0 4px 0 rgba(0, 0, 0, 0.45), 0 0 0 5px color-mix(in srgb, var(--wacc) 0%, transparent); } }
+.wlock { font-size: 14px; color: var(--ink-dim); margin-top: 10px; }
+
+/* resultado */
+.result h2 { margin: 0; text-align: center; font-size: 28px; color: var(--ember); text-shadow: 0 3px 0 #5a1a0f; }
+.result .sub { text-align: center; color: var(--ink-dim); margin: 4px 0 14px; font-size: 15px; letter-spacing: 1px; }
+.statrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 2px; border-bottom: 2px dashed rgba(255, 255, 255, 0.07); font-size: 18px; font-variant-numeric: tabular-nums; }
+.statrow span:first-child { color: var(--ink-dim); }
+.badge { display: inline-block; margin-left: 8px; padding: 2px 7px; font-size: 12px; letter-spacing: 1px; background: var(--ruby); color: #2a0510; border-radius: 3px; vertical-align: 2px; }
+.result .gems .gem { width: 16px; height: 16px; }
+.result .gems .gem.pop { animation: gempop 0.5s ease-out both; }
+@keyframes gempop { 0% { transform: rotate(45deg) scale(0); } 70% { transform: rotate(45deg) scale(1.3); } 100% { transform: rotate(45deg) scale(0.8); } }
+
+/* loja */
+.skins { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 12px; width: min(100%, 720px); }
+.skin { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px 8px 6px; margin: 3px; background: var(--panel); box-shadow: inset 0 0 0 2px #3a2330, 0 -3px 0 #0b0509, 0 3px 0 #0b0509, -3px 0 0 #0b0509, 3px 0 0 #0b0509, 0 9px 0 rgba(0, 0, 0, 0.35); }
+.skin canvas { width: 80px; height: 80px; image-rendering: pixelated; }
+.skin .sn { font-size: 17px; font-weight: 600; }
+.skin.eq { box-shadow: inset 0 0 0 2px var(--ember), 0 -3px 0 #0b0509, 0 3px 0 #0b0509, -3px 0 0 #0b0509, 3px 0 0 #0b0509, 0 0 18px rgba(255, 140, 40, 0.35); }
+.skin .btn { min-height: 40px; font-size: 15px; }
+.wallet { margin-left: auto; }
+
+/* ajustes */
+.setting { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 2px; border-bottom: 2px dashed rgba(255, 255, 255, 0.07); font-size: 18px; }
+.tog { width: 62px; height: 32px; border-radius: 16px; background: #3a2a33; border: 2px solid var(--line); position: relative; cursor: pointer; flex: none; padding: 0; }
+.tog::after { content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: var(--ink-dim); transition: left 0.15s, background 0.15s; }
+.tog[aria-pressed='true'] { background: #6a2a12; border-color: var(--ember-deep); }
+.tog[aria-pressed='true']::after { left: 33px; background: var(--ember); box-shadow: 0 0 10px var(--ember); }
+.seg { display: inline-flex; border: 2px solid var(--line); border-radius: 6px; overflow: hidden; flex: none; }
+.seg button { padding: 6px 10px; background: var(--panel-2); border: 0; font-size: 15px; cursor: pointer; }
+.seg button[aria-pressed='true'] { background: var(--ember); color: #2a0b03; }
+
+.note { font-size: 14px; color: var(--ink-dim); line-height: 1.4; margin: 10px 0 0; }
+
+/* final */
+#scr-ending { justify-content: center; background: linear-gradient(180deg, rgba(13, 7, 16, 0) 35%, rgba(13, 7, 16, 0.85) 100%); }
+.ending h2 { font-size: 30px; text-align: center; margin: 0 0 6px; color: #ffe3b0; text-shadow: 0 3px 0 #a8380f, 0 0 26px rgba(255, 140, 40, 0.7); }
+.ending p { text-align: center; color: var(--ink-dim); line-height: 1.45; margin: 0 0 12px; font-size: 16px; }
+
+.toast { position: absolute; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); padding: 8px 14px; background: var(--panel); z-index: 30; font-size: 15px; animation: fadein 0.2s; pointer-events: none; box-shadow: inset 0 0 0 2px var(--ember), 0 -3px 0 #0b0509, 0 3px 0 #0b0509, -3px 0 0 #0b0509, 3px 0 0 #0b0509; }
+#rotate-tip { display: none; }
+
+/* botão noturno do Modo Fuga */
+.btn.night { --face: #6f3bb4; --hi: #a983f0; --lo: #4a2283; --out: #14052a; --depth: #2a0e4a; --txt: #f6ecff; text-shadow: 0 2px 0 #2a0e4a; flex-direction: column; gap: 0; line-height: 1.1; }
+.btn.night small { font-size: 12px; font-weight: 500; letter-spacing: 1px; opacity: 0.85; }
+.btn.night small:empty { display: none; }
+.btn.locked { filter: grayscale(0.75) brightness(0.7); }
+.title-menu .row .btn { font-size: 15px; padding-left: 4px; padding-right: 4px; }
+.life { width: 12px; height: 14px; background: radial-gradient(circle at 50% 70%, #fff2c2 0 22%, #ffb23a 24% 50%, #e0631e 52% 100%); clip-path: polygon(50% 0, 78% 38%, 100% 62%, 88% 92%, 50% 100%, 12% 92%, 0 62%, 22% 38%); filter: drop-shadow(0 0 4px #ff8a2a); }
+.life.off { background: #3a2a33; filter: none; }
+#r-rows .badge.night { background: #a983f0; color: #14052a; }
+/* troféus */
+.achs { width: min(100%, 720px); display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.ach { display: flex; gap: 12px; align-items: center; padding: 12px; margin: 3px; background: var(--panel); box-shadow: inset 0 0 0 2px #3a2330, 0 -3px 0 #0b0509, 0 3px 0 #0b0509, -3px 0 0 #0b0509, 3px 0 0 #0b0509; }
+.ach .cup { flex: none; width: 36px; height: 36px; display: grid; place-items: center; background: #24151d; box-shadow: inset 0 0 0 2px #3a2330; }
+.ach .cup svg { width: 24px; height: 24px; shape-rendering: crispEdges; fill: #5a4450; }
+.ach.on .cup { background: #3a1a10; box-shadow: inset 0 0 0 2px #ffb45a, 0 0 14px rgba(255, 150, 50, 0.35); }
+.ach.on .cup svg { fill: #ffcf6b; }
+.ach b { display: block; font-size: 16px; margin-bottom: 2px; }
+.ach span { font-size: 13px; color: var(--ink-dim); line-height: 1.3; }
+.ach:not(.on) b { color: var(--ink-dim); }
+.stats-panel { width: min(calc(100% - 6px), 720px); margin-top: 16px; }
+.toast.trophy { top: calc(14px + env(safe-area-inset-top, 0px)); bottom: auto; display: flex; align-items: center; gap: 10px; box-shadow: inset 0 0 0 2px #ffcf6b, 0 -3px 0 #0b0509, 0 3px 0 #0b0509, -3px 0 0 #0b0509, 3px 0 0 #0b0509, 0 0 24px rgba(255, 180, 60, 0.45); }
+.toast.trophy svg { width: 22px; height: 22px; fill: #ffcf6b; shape-rendering: crispEdges; }
+.toast.trophy small { display: block; font-size: 11px; letter-spacing: 2px; color: var(--ember); }
+@media (orientation: landscape) and (max-height: 520px) {
+  #scr-title { flex-direction: row; justify-content: center; align-items: center; gap: min(8vw, 64px); }
+  #scr-title .logo, #scr-title .title-menu { margin: 0; }
+}
+@media (max-height: 460px) {
+  .scr { padding-top: calc(8px + env(safe-area-inset-top, 0px)); padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
+  .panel { padding: 12px 16px; }
+  .statrow { padding: 5px 2px; font-size: 16px; }
+  .result h2, .ending h2 { font-size: 22px; }
+  .result .sub { margin: 2px 0 6px; }
+  .btn { min-height: 44px; font-size: 18px; }
+  .stack { gap: 10px; }
+  .ending p { font-size: 14px; margin-bottom: 6px; }
+  .ending .note { display: none; }
+  .topbar { margin-bottom: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .logo h1, .lvl.next, .logo canvas { animation: none; }
+  .scr { animation: none; }
+}
+</style>
+<!--/build:head-->
+</head>
+<body>
+<!--build:body-->
+<div id="app" class="landscape">
+  <div id="stage">
+    <canvas id="screen" aria-label="Tela do jogo Faísca"></canvas>
+    <div id="hud" hidden>
+      <div class="hud-top">
+        <span class="chip"><span class="ico-brasa"></span><span id="hud-brasas">0</span></span>
+        <span class="chip gems" id="hud-gems"><i class="gem"></i><i class="gem"></i><i class="gem"></i></span>
+        <span class="chip lives" id="hud-lives" hidden><i class="life"></i><i class="life"></i><i class="life"></i></span>
+        <span class="chip" id="timer">00:00.00</span>
+        <button class="icon-btn" id="btn-pause" aria-label="Pausar"><svg viewBox="0 0 10 10"><rect x="2" y="1.5" width="2" height="7"/><rect x="6" y="1.5" width="2" height="7"/></svg></button>
+      </div>
+      <div id="combo"></div>
+      <div id="banner"><div class="n" id="banner-n"></div><div class="t" id="banner-t"></div></div>
+      <div id="hint"></div>
+    </div>
+  </div>
+  <div id="pad" aria-hidden="true">
+    <div class="console-deco"><div class="brand"><span class="led"></span>FAÍSCA <small>PORTÁTIL</small></div><div class="grill"></div></div>
+    <div class="dpad">
+      <div class="pbtn b-left" id="b-left"><svg viewBox="0 0 12 12"><path class="ico-main" d="M7 1h2v10H7zM6 2h1v8H6zM5 3h1v6H5zM4 4h1v4H4zM3 5h1v2H3z"/></svg></div>
+      <div class="pbtn b-right" id="b-right"><svg viewBox="0 0 12 12"><path class="ico-main" d="M3 1h2v10H3zM5 2h1v8H5zM6 3h1v6H6zM7 4h1v4H7zM8 5h1v2H8z"/></svg></div>
+    </div>
+    <div class="acts">
+      <div class="pbtn act-dash" id="b-dash"><svg viewBox="0 0 12 12"><path class="ico-dim" d="M0 6h2v1H0zM0 8h1v1H0zM1 4h1v1H1z"/><path class="ico-hot" d="M7 0h1v1H7zM6 1h2v1H6zM6 2h3v1H6zM5 3h4v1H5zM4 4h6v1H4zM3 5h8v4H3zM4 9h6v1H4zM5 10h4v1H5z"/><path class="ico-core" d="M6 6h2v1H6zM5 7h4v2H5zM6 9h2v1H6z"/></svg><span class="lbl">DASH</span></div>
+      <div class="pbtn act-jump" id="b-jump"><svg viewBox="0 0 12 12"><path class="ico-main" d="M5 1h2v1H5zM4 2h4v1H4zM3 3h6v1H3zM2 4h8v1H2zM1 5h10v1H1zM4 6h4v5H4z"/></svg><span class="lbl">PULO</span></div>
+    </div>
+    <button class="pill" id="b-pill" data-pass="1" aria-label="Pausar"><i></i><span>PAUSA</span></button>
+  </div>
+  <div id="screens">
+    <section class="scr" id="scr-title" hidden>
+      <div class="corner">
+        <button class="icon-btn" id="btn-full" aria-label="Tela cheia"><svg viewBox="0 0 10 10"><path d="M1 1h3v1.4H2.4V4H1zM6 1h3v3H7.6V2.4H6zM1 6h1.4v1.6H4V9H1zM7.6 6H9v3H6V7.6h1.6z"/></svg></button>
+      </div>
+      <div class="logo">
+        <canvas id="t-hero" width="20" height="20" aria-hidden="true"></canvas>
+        <h1>FAÍSCA</h1>
+        <p>A CHAMA DA MONTANHA OCA</p>
+      </div>
+      <div class="title-menu stack">
+        <button class="btn" id="t-play">Aventura</button>
+        <button class="btn night" id="t-run"><span>Modo Fuga</span><small id="t-run-best"></small></button>
+        <div class="row">
+          <button class="btn ghost small" id="t-shop">Loja</button>
+          <button class="btn ghost small" id="t-ach">Troféus</button>
+          <button class="btn ghost small" id="t-settings">Ajustes</button>
+        </div>
+        <div class="title-foot">
+          <span class="chip"><span class="ico-brasa"></span><span id="t-wallet">0</span></span>
+          <span class="chip"><i class="gem on" style="transform:rotate(45deg) scale(.7)"></i><span id="t-gems">0/36</span></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="scr dim" id="scr-map" hidden>
+      <div class="topbar">
+        <button class="icon-btn" id="m-back" aria-label="Voltar"><svg viewBox="0 0 10 10"><path d="M6.5 1 L2.5 5 L6.5 9 L7.6 7.9 L4.7 5 L7.6 2.1 Z"/></svg></button>
+        <h2>Mapa</h2>
+        <span class="chip"><span class="ico-brasa"></span><span id="m-wallet">0</span></span>
+        <button class="icon-btn" id="m-shop" aria-label="Loja"><svg viewBox="0 0 10 10"><path d="M5 0.5 C6.5 2.5 8.5 4 8.5 6.4 A3.5 3.5 0 0 1 1.5 6.4 C1.5 5 2.4 4 3.2 3.4 C3.3 4.4 3.8 5 4.4 5.2 C4 3.6 4.4 2 5 0.5 Z"/></svg></button>
+      </div>
+      <div class="worlds" id="worlds"></div>
+    </section>
+
+    <section class="scr dim" id="scr-pause" hidden>
+      <div class="panel stack" style="margin:auto">
+        <h2 style="margin:0;text-align:center;font-size:28px">Pausa</h2>
+        <div class="sub" id="p-sub" style="text-align:center;color:var(--ink-dim)"></div>
+        <button class="btn" id="p-resume">Continuar</button>
+        <button class="btn ghost" id="p-restart">Reiniciar fase</button>
+        <button class="btn ghost" id="p-map">Voltar ao mapa</button>
+        <div class="row">
+          <button class="btn ghost small" id="p-music">Música</button>
+          <button class="btn ghost small" id="p-sfx">Efeitos</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="scr dim" id="scr-complete" hidden>
+      <div class="panel result" style="margin:auto">
+        <h2 id="r-title">Fase concluída!</h2>
+        <div class="sub" id="r-sub"></div>
+        <div id="r-rows"></div>
+        <div class="stack" style="margin-top:16px">
+          <button class="btn" id="r-next">Próxima fase</button>
+          <div class="row">
+            <button class="btn ghost" id="r-retry">Repetir</button>
+            <button class="btn ghost" id="r-map">Mapa</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="scr dim" id="scr-shop" hidden>
+      <div class="topbar">
+        <button class="icon-btn" id="s-back" aria-label="Voltar"><svg viewBox="0 0 10 10"><path d="M6.5 1 L2.5 5 L6.5 9 L7.6 7.9 L4.7 5 L7.6 2.1 Z"/></svg></button>
+        <h2>Loja de Chamas</h2>
+        <span class="chip wallet"><span class="ico-brasa"></span><span id="s-wallet">0</span></span>
+      </div>
+      <div class="skins" id="skins"></div>
+      <p class="note" style="width:min(100%,720px)">Junte brasas nas fases e derrotando inimigos em combo. Cada fase concluída deposita as brasas da partida na carteira.</p>
+    </section>
+
+    <section class="scr dim" id="scr-settings" hidden>
+      <div class="topbar">
+        <button class="icon-btn" id="o-back" aria-label="Voltar"><svg viewBox="0 0 10 10"><path d="M6.5 1 L2.5 5 L6.5 9 L7.6 7.9 L4.7 5 L7.6 2.1 Z"/></svg></button>
+        <h2>Ajustes</h2>
+      </div>
+      <div class="panel">
+        <div class="setting"><span>Música</span><button class="tog" id="o-music" aria-label="Música"></button></div>
+        <div class="setting"><span>Efeitos sonoros</span><button class="tog" id="o-sfx" aria-label="Efeitos sonoros"></button></div>
+        <div class="setting"><span>Vibração</span><button class="tog" id="o-vibrate" aria-label="Vibração"></button></div>
+        <div class="setting"><span>Cronômetro</span><button class="tog" id="o-timer" aria-label="Cronômetro"></button></div>
+        <div class="setting"><span>Canhoto (inverter botões)</span><button class="tog" id="o-lefty" aria-label="Canhoto"></button></div>
+        <div class="setting"><span>Tremor e clarões</span><button class="tog" id="o-shake" aria-label="Tremor e clarões"></button></div>
+        <div class="setting install-row"><span>Instalar no celular</span><button class="btn small" id="o-install">Instalar</button></div>
+        <p class="note" id="o-install-note" hidden></p>
+        <div class="setting"><span>Escuridão</span><span class="seg" id="o-bright"><button data-v="1.12">Forte</button><button data-v="1">Normal</button><button data-v="0.78">Leve</button></span></div>
+        <div class="setting"><span>Botões</span><span class="seg" id="o-buttons"><button data-v="p">P</button><button data-v="m">M</button><button data-v="g">G</button></span></div>
+        <div style="margin-top:16px"><button class="btn danger small" id="o-reset">Apagar progresso</button></div>
+        <p class="note">Controles no teclado: ← → para andar, Espaço para pular, X para dash, Esc para pausar. Controles de videogame também funcionam.</p>
+      </div>
+    </section>
+
+    <section class="scr dim" id="scr-ach" hidden>
+      <div class="topbar">
+        <button class="icon-btn" id="a-back" aria-label="Voltar"><svg viewBox="0 0 10 10"><path d="M6.5 1 L2.5 5 L6.5 9 L7.6 7.9 L4.7 5 L7.6 2.1 Z"/></svg></button>
+        <h2>Troféus</h2>
+        <span class="chip" id="a-count">0/0</span>
+      </div>
+      <div class="achs" id="achs"></div>
+      <div class="panel stats-panel" id="a-stats"></div>
+    </section>
+
+    <section class="scr" id="scr-ending" hidden>
+      <div class="panel ending">
+        <h2>A luz voltou!</h2>
+        <p>A Grande Lanterna da Montanha Oca brilha outra vez, e as grutas lembram do seu nome: Faísca.</p>
+        <div class="statrow"><span>Gemas de chama</span><span id="e-gems"></span></div>
+        <div class="statrow"><span>Apagadas no caminho</span><span id="e-deaths"></span></div>
+        <div class="statrow"><span>Inimigos derrotados</span><span id="e-kills"></span></div>
+        <p class="note" id="e-note" style="text-align:center"></p>
+        <button class="btn" id="e-map" style="margin-top:10px">Voltar ao mapa</button>
+      </div>
+    </section>
+  </div>
+</div>
+<script type="module" src="js/main.js"></script>
+<!--/build:body-->
+</body>
+</html>
